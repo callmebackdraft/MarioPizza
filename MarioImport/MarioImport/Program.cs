@@ -25,7 +25,7 @@ namespace MarioImport
         {
             string[] files = { @"\pizza_ingredienten.xlsx", @"\Overige producten.xlsx" };
             List<string> result = new List<string>();
-            foreach(string file in files)
+            foreach (string file in files)
             {
                 using (FileStream stream = File.OpenRead(basePath + file))
                 using (IExcelDataReader dr = ExcelReaderFactory.CreateOpenXmlReader(stream))
@@ -36,9 +36,9 @@ namespace MarioImport
                     int subCatColumn = 0;
                     for (int rowCount = 0; rowCount < table.Rows.Count; rowCount++)
                     {
-                        if(rowCount == 0)
+                        if (rowCount == 0)
                         {
-                            for(int columnCount = 0; columnCount < table.Rows[rowCount].ItemArray.Length; columnCount++)
+                            for (int columnCount = 0; columnCount < table.Rows[rowCount].ItemArray.Length; columnCount++)
                             {
                                 if (table.Rows[rowCount].ItemArray[columnCount].ToString().ToLower() == "categorie")
                                 {
@@ -53,14 +53,15 @@ namespace MarioImport
                         }
                         else
                         {
-                            if (table.Rows[rowCount].ItemArray[categoryColumn].ToString().ToLower().IndexOfAny( new char[] { '&', ',' }) > 0){
-                                result.AddRange(table.Rows[rowCount].ItemArray[categoryColumn].ToString().Split(new char[] { '&', ','}));
+                            if (table.Rows[rowCount].ItemArray[categoryColumn].ToString().ToLower().IndexOfAny(new char[] { '&', ',' }) > 0)
+                            {
+                                result.AddRange(table.Rows[rowCount].ItemArray[categoryColumn].ToString().Split(new char[] { '&', ',' }));
                             }
                             else
                             {
                                 result.Add(table.Rows[rowCount].ItemArray[categoryColumn].ToString());
                             }
-                            
+
                             if (table.Rows[rowCount].ItemArray[subCatColumn].ToString().ToLower().IndexOfAny(new char[] { '&', ',' }) > 0)
                             {
                                 result.AddRange(table.Rows[rowCount].ItemArray[subCatColumn].ToString().Split(new char[] { '&', ',' }));
@@ -76,9 +77,46 @@ namespace MarioImport
             return result.Select(t => t.Trim()).Distinct().ToList();
         }
 
-        //private string[] GetProducts()
-        //{
-
-        //}
+        private List<Product> GetProducts(string basePath)
+        {
+            string[] files = { @"\pizza_ingredienten.xlsx", @"\Overige producten.xlsx", @"\pizzabodems.xlsx" };
+            List<Product> result = new List<Product>();
+            foreach (string file in files)
+            {
+                using (FileStream stream = File.OpenRead(basePath + file))
+                using (IExcelDataReader dr = ExcelReaderFactory.CreateOpenXmlReader(stream))
+                {
+                    List<int> ColumnsToRead = new List<int>();
+                    DataSet data = dr.AsDataSet();
+                    var table = data.Tables[0];
+                    for (int rowCount = 0; rowCount < table.Rows.Count; rowCount++)
+                    {
+                        if (rowCount == 0)
+                        {
+                            for (int columnCount = 0; columnCount < table.Rows[rowCount].ItemArray.Length; columnCount++)
+                            {
+                                string columndHeader = table.Rows[rowCount].ItemArray[columnCount].ToString().ToLower();
+                                if (columndHeader.Contains("naam") || columndHeader.Contains("pizzasaus_standaard"))
+                                {
+                                    ColumnsToRead.Add(columnCount);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            foreach(int colIndex in ColumnsToRead)
+                            {
+                                result.Add(new Product
+                                {
+                                    Name = table.Rows[rowCount].ItemArray[colIndex].ToString().ToLower(),
+                                });
+                            }
+                            
+                        }
+                    }
+                }
+            }
+            return result;
+        }
     }
 }
