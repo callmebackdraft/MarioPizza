@@ -16,7 +16,6 @@ namespace CSV_MarioSplitter
         {
 
             string connString = "Data Source=sql6009.site4now.net;Initial Catalog=DB_A2C9F3_MarioPizza;Persist Security Info=True;User ID=DB_A2C9F3_MarioPizza_admin;Password=Februarie2020!";
-            
 
             SqlConnection cnx = new SqlConnection(connString);
             SqlCommand cmdOrderData = new SqlCommand();
@@ -29,7 +28,7 @@ namespace CSV_MarioSplitter
             int AdressID = 1;
             string Zipcode = "";
 
-            System.Data.DataTable table = ConvertCSVtoDataTable(@"B:\Downloads\MarioData (1)\MarioOrderData01_10000.csv");
+            DataTable table = ConvertCSVtoDataTable(@"B:\Downloads\MarioData (1)\MarioOrderData01_10000.csv");
 
             cnx.Open();
             cmdOrderData.Connection = cnx;
@@ -40,22 +39,28 @@ namespace CSV_MarioSplitter
             foreach (DataRow dataRow in table.Rows)
             {
                 isHeader = false;
+                //if (table.Rows.IndexOf(dataRow) <= 1)
+                //{
+                //    continue;
+                //}
 
                 if (dataRow.ItemArray.GetValue(0) != "")
                 {
+
+                   
                     //Split address field into Streetname, house number and house number addition
                     List<string> addressInfo = new List<string>();
                     addressInfo = AdressSplitter(dataRow.ItemArray.GetValue(4).ToString());
+
+                    if (addressInfo == null)
+                    {
+                        Console.WriteLine("Het address splitten is niet gelukt");
+                    }
 
                     //Get ZipCode from access database
                     if (addressInfo.Count > 1)
                     {
                         Zipcode  = GetZipCode(addressInfo[0], addressInfo[1]);
-                    }
-
-                    if (addressInfo == null)
-                    {
-                        Console.WriteLine("Het address splitten is niet gelukt");
                     }
 
 
@@ -257,11 +262,15 @@ namespace CSV_MarioSplitter
             return result;
         }
 
-        public static System.Data.DataTable ConvertCSVtoDataTable(string strFilePath)
+        public static DataTable ConvertCSVtoDataTable(string strFilePath)
         {
-            System.Data.DataTable dt = new System.Data.DataTable();
+            DataTable dt = new DataTable();
             using (StreamReader sr = new StreamReader(strFilePath))
             {
+                sr.ReadLine();
+                sr.ReadLine();
+                sr.ReadLine();
+                sr.ReadLine();
                 string[] headers = sr.ReadLine().Split(';');
                 foreach (string header in headers)
                 {
@@ -303,7 +312,7 @@ namespace CSV_MarioSplitter
             }
             return Empty;
         }
-        public static string DumpDataTable(System.Data.DataTable table)
+        public static string DumpDataTable(DataTable table)
         {
             string data = string.Empty;
             StringBuilder sb = new StringBuilder();
