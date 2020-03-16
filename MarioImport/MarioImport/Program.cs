@@ -19,8 +19,12 @@ namespace MarioImport
             }
 
         }
-
-
+        private void test()
+        {
+            TXTImport import = new TXTImport();
+            import.textImport();
+            import.databasewrite();
+        }
         private static List<string> GetCategories(string basePath)
         {
             string[] files = { @"\pizza_ingredienten.xlsx", @"\Overige producten.xlsx" };
