@@ -13,13 +13,14 @@ namespace MarioImport
         {
             System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
             string basePath = @"C:\Users\tonyw\source\repos\MarioImport\Data";
+            test();
             foreach (string str in GetCategories(basePath))
             {
                 Console.WriteLine(str);
             }
-
+            
         }
-        private void test()
+        private static void test()
         {
             TXTImport import = new TXTImport();
             import.textImport();

@@ -29,7 +29,7 @@ namespace CSV_MarioSplitter
             int AdressID = 1;
             string Zipcode = "";
 
-            System.Data.DataTable table = ConvertCSVtoDataTable(@"B:\Downloads\MarioData (1)\MarioOrderData01_10000.csv");
+            System.Data.DataTable table = ConvertCSVtoDataTable(@"C:\Users\tonyw\source\repos\MarioImport\Data\MarioOrderData01_10000.csv");
 
             cnx.Open();
             cmdOrderData.Connection = cnx;
@@ -223,7 +223,7 @@ namespace CSV_MarioSplitter
         public static string GetZipCode(string streetName, string houseNumber)
         {
             string result = "";
-            OleDbConnection conn = new OleDbConnection("Provider = Microsoft.Jet.OLEDB.4.0; Data Source = C:\\Postcode tabel.mdb");
+            OleDbConnection conn = new OleDbConnection(@"Provider = Microsoft.Jet.OLEDB.4.0; Data Source = C:\Users\tonyw\source\repos\MarioImport\Data\Postcode tabel.mdb");
 
             OleDbCommand cmd = new OleDbCommand
             {
