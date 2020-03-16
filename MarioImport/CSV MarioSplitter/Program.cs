@@ -5,6 +5,8 @@ using System.Data.SqlClient;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Data.OleDb;
+
 
 namespace CSV_MarioSplitter
 {
@@ -14,25 +16,26 @@ namespace CSV_MarioSplitter
         {
 
             string connString = "Data Source=sql6009.site4now.net;Initial Catalog=DB_A2C9F3_MarioPizza;Persist Security Info=True;User ID=DB_A2C9F3_MarioPizza_admin;Password=Februarie2020!";
-
+            
 
             SqlConnection cnx = new SqlConnection(connString);
-            int OrderId = 1;
-            int CustomerID = 1;
-            int AdressID = 1;
             SqlCommand cmdOrderData = new SqlCommand();
             SqlCommand cmdAddress = new SqlCommand();
             SqlCommand cmdCustomer = new SqlCommand();
+
             Boolean isHeader = false;
+            int OrderId = 1;
+            int CustomerID = 1;
+            int AdressID = 1;
+            string Zipcode = "";
 
-            string StrSQL = "";
-
-            DataTable table = ConvertCSVtoDataTable(@"B:\Downloads\MarioData (1)\MarioOrderData01_10000.csv");
+            System.Data.DataTable table = ConvertCSVtoDataTable(@"B:\Downloads\MarioData (1)\MarioOrderData01_10000.csv");
 
             cnx.Open();
             cmdOrderData.Connection = cnx;
             cmdAddress.Connection = cnx;
             cmdCustomer.Connection = cnx;
+
             //Import orders
             foreach (DataRow dataRow in table.Rows)
             {
@@ -40,8 +43,15 @@ namespace CSV_MarioSplitter
 
                 if (dataRow.ItemArray.GetValue(0) != "")
                 {
+                    //Split address field into Streetname, house number and house number addition
                     List<string> addressInfo = new List<string>();
                     addressInfo = AdressSplitter(dataRow.ItemArray.GetValue(4).ToString());
+
+                    //Get ZipCode from access database
+                    if (addressInfo.Count > 1)
+                    {
+                        Zipcode  = GetZipCode(addressInfo[0], addressInfo[1]);
+                    }
 
                     if (addressInfo == null)
                     {
@@ -51,6 +61,7 @@ namespace CSV_MarioSplitter
 
                     isHeader = true;
 
+                    //Construct orderheader query
                     cmdOrderData.CommandText = "INSERT INTO [OrderHeader-QL] (" +
                         "ID," +
                         "CustomerID," +
@@ -93,7 +104,7 @@ namespace CSV_MarioSplitter
                     {
                         cmdOrderData.Parameters.AddWithValue("@Delivery", 1);
                     }
-                    cmdOrderData.Parameters.AddWithValue("@ZipCode", "");
+                    cmdOrderData.Parameters.AddWithValue("@ZipCode", Zipcode);
                     if (addressInfo.Count > 1)
                     {
                         cmdOrderData.Parameters.AddWithValue("@HousNumber", addressInfo[1]);
@@ -112,16 +123,17 @@ namespace CSV_MarioSplitter
                     }
                     cmdOrderData.Parameters.AddWithValue("@Deliverytime", dataRow.ItemArray.GetValue(8) + " " + dataRow.ItemArray.GetValue(9));
 
-
+                    //Construct Customer query
                     cmdCustomer.CommandText = "INSERT INTO [Customer-QL] (ID,Name,Email,Phonenumber ) VALUES(@CustID,@CustName,@CustEmail,@CustPhoneNumber)";
                     cmdCustomer.Parameters.AddWithValue("@CustID", CustomerID);
                     cmdCustomer.Parameters.AddWithValue("@CustName", dataRow.ItemArray.GetValue(1));
                     cmdCustomer.Parameters.AddWithValue("@CustEmail", dataRow.ItemArray.GetValue(4));
                     cmdCustomer.Parameters.AddWithValue("@CustPhoneNumber", dataRow.ItemArray.GetValue(2));
 
-
-                    cmdAddress.CommandText = "INSERT INTO [Address-QL] (ID,Housenumber,HouseNumberAddition,Streetname,City) VALUES(@AddressID,@AddressHouseNumber,@AddressHouseNumberAdditon,@AddressStreetname,@AddressCity)";
+                    //Construct address query
+                    cmdAddress.CommandText = "INSERT INTO [Address-QL] (ID,Zipcode,Housenumber,HouseNumberAddition,Streetname,City) VALUES(@AddressID,@ZipCode,@AddressHouseNumber,@AddressHouseNumberAdditon,@AddressStreetname,@AddressCity)";
                     cmdAddress.Parameters.AddWithValue("@AddressID", AdressID);
+                    cmdAddress.Parameters.AddWithValue("@ZipCode", Zipcode);
                     if (addressInfo.Count > 0)
                     {
                         cmdAddress.Parameters.AddWithValue("@AddressHouseNumber", addressInfo[1]);
@@ -152,7 +164,7 @@ namespace CSV_MarioSplitter
                 else
                 {
                     isHeader = false;
-                    //StrSQL = "INSERT INTO [OrderLine-QL] (StoreID) VALUES ('" + dataRow.ItemArray.GetValue(0) + "') ";
+                    //Construct orderline query
                     cmdOrderData.CommandText = "INSERT INTO [OrderLine-QL] (Quantity,PricePaid,OrderHeaderID,ProductID) VALUES (@LineQuantity,@LinePricePaid,@OrderHeaderID,@ProductID)";
                     cmdOrderData.Parameters.AddWithValue("@LineQuantity", dataRow.ItemArray.GetValue(17));
                     cmdOrderData.Parameters.AddWithValue("@LinePricePaid", dataRow.ItemArray.GetValue(15));
@@ -164,12 +176,14 @@ namespace CSV_MarioSplitter
                 {
                     if (isHeader)
                     {
+                        //Execute orderheader, customer and address queries
                         cmdOrderData.ExecuteNonQuery();
                         cmdCustomer.ExecuteNonQuery();
                         cmdAddress.ExecuteNonQuery();
                     }
                     else
                     {
+                        //Execute orderline query
                         cmdOrderData.ExecuteNonQuery();
                     }
                 }
@@ -180,6 +194,7 @@ namespace CSV_MarioSplitter
                 }
                 finally
                 {
+                    //Clear paramaters for the next row
                     cmdOrderData.Parameters.Clear();
                     cmdCustomer.Parameters.Clear();
                     cmdAddress.Parameters.Clear();
@@ -205,10 +220,46 @@ namespace CSV_MarioSplitter
             }
             return addressInfo;
         }
-
-        public static DataTable ConvertCSVtoDataTable(string strFilePath)
+        public static string GetZipCode(string streetName, string houseNumber)
         {
-            DataTable dt = new DataTable();
+            string result = "";
+            OleDbConnection conn = new OleDbConnection("Provider = Microsoft.Jet.OLEDB.4.0; Data Source = C:\\Postcode tabel.mdb");
+
+            OleDbCommand cmd = new OleDbCommand
+            {
+                Connection = conn,
+                CommandType = CommandType.Text,
+                CommandText = "SELECT [A13_POSTCODE] FROM [POSTCODES] WHERE " +
+                    "[A13_STRAATNAAM] = @StreetName AND " +
+                    "[A13_BREEKPUNT_VAN] <= @HouseNumber AND " +
+                    "[A13_BREEKPUNT_TEM] >= @HouseNumber "
+            };
+            cmd.Parameters.AddWithValue("@StreetName", streetName);
+            if (int.TryParse(houseNumber, out _))
+            {
+                cmd.Parameters.AddWithValue("@HouseNumber", houseNumber); 
+            }
+            try
+            {
+                conn.Open();
+                OleDbDataReader reader = cmd.ExecuteReader();
+                result = reader.GetString(0);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+            finally
+            {
+                conn.Close();
+            }
+
+            return result;
+        }
+
+        public static System.Data.DataTable ConvertCSVtoDataTable(string strFilePath)
+        {
+            System.Data.DataTable dt = new System.Data.DataTable();
             using (StreamReader sr = new StreamReader(strFilePath))
             {
                 string[] headers = sr.ReadLine().Split(';');
@@ -252,7 +303,7 @@ namespace CSV_MarioSplitter
             }
             return Empty;
         }
-        public static string DumpDataTable(DataTable table)
+        public static string DumpDataTable(System.Data.DataTable table)
         {
             string data = string.Empty;
             StringBuilder sb = new StringBuilder();

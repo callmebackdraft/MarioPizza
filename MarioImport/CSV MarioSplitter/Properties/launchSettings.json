@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "CSV MarioSplitter": {
+      "commandName": "Project",
+      "sqlDebugging": false,
+      "nativeDebugging": false
+    }
+  }
+}
