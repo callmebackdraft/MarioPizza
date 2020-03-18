@@ -3,12 +3,13 @@ using System.IO;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Data.SqlClient;
+using Newtonsoft.Json;
 
 namespace MarioImport
 {
     class TXTImport
     {
-        string[] lines = File.ReadAllLines(@"c:\\test\\MarioPizza\\Winkels Mario.txt");
+        string[] lines = File.ReadAllLines(@"C:\Users\tonyw\source\repos\MarioImport\Data\Winkels Mario.txt");
         List<Store> stores = new List<Store>();
         Dictionary<Store, string> storeDictoinary = new Dictionary<Store, string>();
 
@@ -17,7 +18,7 @@ namespace MarioImport
 
             Console.WriteLine("contents of the stores.txt = ");
 
-            for(int i = 3; i < lines.Length; i++)
+            for (int i = 3; i < lines.Length; i++)
             {
                 String Name = lines[i];
                 i++;
@@ -46,13 +47,13 @@ namespace MarioImport
                     }
                 }
 
-                
+
 
                 Store tempstore = new Store(Name, Street, homeNumberNumber.ToString(), homeNumberSuffix, City, Country, ZipCode, PhoneNumber);
                 if (IsNLZipCode(ZipCode) && IsNLPhoennumber(PhoneNumber)) stores.Add(tempstore);
                 else
                 {
-                    if(!IsNLZipCode(ZipCode))
+                    if (!IsNLZipCode(ZipCode))
                     {
                         storeDictoinary.Add(tempstore, ": Zip code incorrect.");
                     }
@@ -71,12 +72,17 @@ namespace MarioImport
             }
 
             Console.WriteLine("all the valid stores:");
-            foreach(Store s in stores)
+            foreach (Store s in stores)
             {
                 Console.WriteLine(s.ToString());
             }
             Console.WriteLine("\n\nall the nonvalid stores:");
-            foreach(KeyValuePair<Store, string> kvp in storeDictoinary)
+            using (System.IO.StreamWriter file =
+            new System.IO.StreamWriter(@"C:\Users\tonyw\source\repos\MarioImport\Data\WriteLines2.txt"))
+            {
+                file.Write(JsonConvert.SerializeObject(storeDictoinary, Formatting.Indented));
+            }
+            foreach (KeyValuePair<Store, string> kvp in storeDictoinary)
             {
                 Console.WriteLine("Store: {0} - Reason: {1}", kvp.Key, kvp.Value);
             }
@@ -86,9 +92,9 @@ namespace MarioImport
         private bool IsNLZipCode(string zipCode)
         {
             var _NLZipRegEx = @"[1-9][0-9]{3}?[A-Z]{2}$";
-            
+
             var validZipCode = true;
-            if (!Regex.Match(zipCode, _NLZipRegEx).Success)validZipCode = false;
+            if (!Regex.Match(zipCode, _NLZipRegEx).Success) validZipCode = false;
             return validZipCode;
         }
 
@@ -97,7 +103,7 @@ namespace MarioImport
             var _NLPhoneNumberEX = @"[0-9]{10}$";
 
             var validPhoneNumber = true;
-            if (!Regex.Match(PhoneNumber, _NLPhoneNumberEX).Success)validPhoneNumber = false;
+            if (!Regex.Match(PhoneNumber, _NLPhoneNumberEX).Success) validPhoneNumber = false;
             return validPhoneNumber;
         }
 
@@ -111,6 +117,10 @@ namespace MarioImport
             cnx.Open();
             cmd.Connection = cnx;
             cmd2.Connection = cnx;
+            Console.Clear();
+
+            
+
             foreach (Store store in stores)
             {
 
