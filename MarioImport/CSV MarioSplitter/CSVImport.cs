@@ -11,7 +11,7 @@ namespace CSV_MarioSplitter
 {
     class CSVImport
     {
-        OleDbConnection accessConn = new OleDbConnection("Provider = Microsoft.Jet.OLEDB.4.0; Data Source = C:\\Postcode tabel.mdb");
+        
         static string sqlConn = "Data Source=sql6009.site4now.net;Initial Catalog=DB_A2C9F3_MarioPizza;Persist Security Info=True;User ID=DB_A2C9F3_MarioPizza_admin;Password=Februarie2020!";
 
         SqlConnection cnx = new SqlConnection(sqlConn);
@@ -32,7 +32,7 @@ namespace CSV_MarioSplitter
             DumpDataTable(table);
 
             cnx.Open();
-            accessConn.Open();
+            //accessConn.Open();
             cmdOrderData.Connection = cnx;
             cmdAddress.Connection = cnx;
             cmdCustomer.Connection = cnx;
@@ -54,7 +54,7 @@ namespace CSV_MarioSplitter
                     //Get ZipCode from access database
                     if (addressInfo.Count > 1)
                     {
-                        Zipcode = GetZipCode(addressInfo[0], addressInfo[1]);
+                        Zipcode = GetZipCode(addressInfo[0], addressInfo[1],dataRow.ItemArray.GetValue(5).ToString());
                     }
 
 
@@ -215,7 +215,7 @@ namespace CSV_MarioSplitter
                 }
             }
             cnx.Close();
-            accessConn.Close();
+            //accessConn.Close();
         }
 
 
@@ -233,29 +233,32 @@ namespace CSV_MarioSplitter
             }
             return addressInfo;
         }
-        public string GetZipCode(string streetName, string houseNumber)
+        public string GetZipCode(string streetName, string houseNumber,string city)
         {
             string result = "";
 
-
+            OleDbConnection accessConn = new OleDbConnection("Provider = Microsoft.Jet.OLEDB.4.0; Data Source = C:\\Postcode tabel.mdb");
+            
             OleDbCommand cmd = new OleDbCommand
             {
                 Connection = accessConn,
                 CommandType = CommandType.Text,
-                CommandText = "SELECT TOP 1 A13_POSTCODE FROM POSTCODES WHERE A13_STRAATNAAM = @StreetName AND  @HouseNumber BETWEEN A13_BREEKPUNT_VAN AND A13_BREEKPUNT_TEM"
+                CommandText = "SELECT TOP 1 A13_POSTCODE FROM POSTCODES WHERE A13_WOONPLAATS = @City AND A13_STRAATNAAM = @StreetName AND  @HouseNumber BETWEEN A13_BREEKPUNT_VAN AND A13_BREEKPUNT_TEM"
             };
 
             cmd.Parameters.AddWithValue("@StreetName", streetName);
+            cmd.Parameters.AddWithValue("@City", city);
             if (int.TryParse(houseNumber, out _))
             {
                 cmd.Parameters.AddWithValue("@HouseNumber", houseNumber);
             }
             try
             {
-
+                accessConn.Open();
                 OleDbDataReader reader = cmd.ExecuteReader();
                 if (!reader.HasRows)
                 {
+                    
                     result = "";
                 }
                 else
@@ -273,6 +276,7 @@ namespace CSV_MarioSplitter
             finally
             {
                 cmd.Parameters.Clear();
+                accessConn.Close();
             }
 
             return result;
