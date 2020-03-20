@@ -4,6 +4,8 @@ using System.Data;
 using System.IO;
 using System.Linq;
 using ExcelDataReader;
+using MoreLinq;
+using System.Data.SqlClient;
 
 namespace MarioImport
 {
@@ -13,12 +15,34 @@ namespace MarioImport
         {
             System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
             string basePath = @"C:\Users\tonyw\source\repos\MarioImport\Data";
-            test();
-            foreach (string str in GetCategories(basePath))
+            var x = GetProducts(basePath);
+            //WriteCategoriesToDB(GetCategories(basePath));
+            WriteProductsToDB(x);
+            foreach (Product product in x)
             {
-                Console.WriteLine(str);
+                Console.WriteLine("------------------------------------------");
+                Console.WriteLine(product.Name);
+                foreach (string str in product.Categories)
+                {
+                    Console.WriteLine("Category: {0}", str);
+                }
+                Console.WriteLine("Price: {0}",product.Price);
+                if (product.Ingredients != null)
+                {
+                    foreach (Product product1 in product.Ingredients)
+                    {
+                        Console.WriteLine("Ingredient: {0} - Amount: {1}", product1.Name, product1.amount);
+                    }
+                }
+
             }
-            
+
+            //test();
+            //foreach (string str in GetCategories(basePath))
+            //{
+            //    Console.WriteLine(str);
+            //}
+
         }
         private static void test()
         {
@@ -26,7 +50,7 @@ namespace MarioImport
             import.textImport();
             import.databasewrite();
         }
-        private static List<string> GetCategories(string basePath)
+        private static List<string> GetCategories(string basePath, string productSpecific = "")
         {
             string[] files = { @"\pizza_ingredienten.xlsx", @"\Overige producten.xlsx" };
             List<string> result = new List<string>();
@@ -37,8 +61,9 @@ namespace MarioImport
                 {
                     DataSet data = dr.AsDataSet();
                     var table = data.Tables[0];
-                    int categoryColumn = 0;
-                    int subCatColumn = 0;
+                    int categoryColumn = -1;
+                    int subCatColumn = -1;
+                    int prodNameColumn = -1;
                     for (int rowCount = 0; rowCount < table.Rows.Count; rowCount++)
                     {
                         if (rowCount == 0)
@@ -54,74 +79,331 @@ namespace MarioImport
                                 {
                                     subCatColumn = columnCount;
                                 }
-                            }
-                        }
-                        else
-                        {
-                            if (table.Rows[rowCount].ItemArray[categoryColumn].ToString().ToLower().IndexOfAny(new char[] { '&', ',' }) > 0)
-                            {
-                                result.AddRange(table.Rows[rowCount].ItemArray[categoryColumn].ToString().Split(new char[] { '&', ',' }));
-                            }
-                            else
-                            {
-                                result.Add(table.Rows[rowCount].ItemArray[categoryColumn].ToString());
-                            }
 
-                            if (table.Rows[rowCount].ItemArray[subCatColumn].ToString().ToLower().IndexOfAny(new char[] { '&', ',' }) > 0)
-                            {
-                                result.AddRange(table.Rows[rowCount].ItemArray[subCatColumn].ToString().Split(new char[] { '&', ',' }));
-                            }
-                            else
-                            {
-                                result.Add(table.Rows[rowCount].ItemArray[subCatColumn].ToString());
-                            }
-                        }
-                    }
-                }
-            }
-            return result.Select(t => t.Trim()).Distinct().ToList();
-        }
-
-        private List<Product> GetProducts(string basePath)
-        {
-            string[] files = { @"\pizza_ingredienten.xlsx", @"\Overige producten.xlsx", @"\pizzabodems.xlsx" };
-            List<Product> result = new List<Product>();
-            foreach (string file in files)
-            {
-                using (FileStream stream = File.OpenRead(basePath + file))
-                using (IExcelDataReader dr = ExcelReaderFactory.CreateOpenXmlReader(stream))
-                {
-                    List<int> ColumnsToRead = new List<int>();
-                    DataSet data = dr.AsDataSet();
-                    var table = data.Tables[0];
-                    for (int rowCount = 0; rowCount < table.Rows.Count; rowCount++)
-                    {
-                        if (rowCount == 0)
-                        {
-                            for (int columnCount = 0; columnCount < table.Rows[rowCount].ItemArray.Length; columnCount++)
-                            {
-                                string columndHeader = table.Rows[rowCount].ItemArray[columnCount].ToString().ToLower();
-                                if (columndHeader.Contains("naam") || columndHeader.Contains("pizzasaus_standaard"))
+                                if (table.Rows[rowCount].ItemArray[columnCount].ToString().ToLower() == "productnaam")
                                 {
-                                    ColumnsToRead.Add(columnCount);
+                                    prodNameColumn = columnCount;
                                 }
                             }
                         }
                         else
                         {
-                            foreach(int colIndex in ColumnsToRead)
+                            if (!string.IsNullOrEmpty(productSpecific) && table.Rows[rowCount].ItemArray[prodNameColumn].ToString().ToLower() == productSpecific)
                             {
-                                result.Add(new Product
+                                var specificResult = new List<string>();
+                                if (table.Rows[rowCount].ItemArray[categoryColumn].ToString().ToLower().IndexOfAny(new char[] { '&', ',' }) > 0)
                                 {
-                                    Name = table.Rows[rowCount].ItemArray[colIndex].ToString().ToLower(),
-                                });
+                                    specificResult.AddRange(table.Rows[rowCount].ItemArray[categoryColumn].ToString().Split(new char[] { '&', ',' }));
+                                }
+                                else
+                                {
+                                    specificResult.Add(table.Rows[rowCount].ItemArray[categoryColumn].ToString());
+                                }
+
+                                if (table.Rows[rowCount].ItemArray[subCatColumn].ToString().ToLower().IndexOfAny(new char[] { '&', ',' }) > 0)
+                                {
+                                    specificResult.AddRange(table.Rows[rowCount].ItemArray[subCatColumn].ToString().Split(new char[] { '&', ',' }));
+                                }
+                                else
+                                {
+                                    specificResult.Add(table.Rows[rowCount].ItemArray[subCatColumn].ToString());
+                                }
+                                return specificResult.Select(t => t.Trim()).Distinct().ToList();
                             }
-                            
+                            else
+                            {
+                                if (table.Rows[rowCount].ItemArray[categoryColumn].ToString().ToLower().IndexOfAny(new char[] { '&', ',' }) > 0)
+                                {
+                                    result.AddRange(table.Rows[rowCount].ItemArray[categoryColumn].ToString().Split(new char[] { '&', ',' }));
+                                }
+                                else
+                                {
+                                    result.Add(table.Rows[rowCount].ItemArray[categoryColumn].ToString());
+                                }
+
+                                if (table.Rows[rowCount].ItemArray[subCatColumn].ToString().ToLower().IndexOfAny(new char[] { '&', ',' }) > 0)
+                                {
+                                    result.AddRange(table.Rows[rowCount].ItemArray[subCatColumn].ToString().Split(new char[] { '&', ',' }));
+                                }
+                                else
+                                {
+                                    result.Add(table.Rows[rowCount].ItemArray[subCatColumn].ToString());
+                                }
+                            }
                         }
                     }
                 }
             }
+            result.AddRange(new List<string> { "ingredient", "pizzabodem" });
+            return result.Select(t => t.Trim()).Distinct().ToList();
+        }
+
+        private static List<Product> GetProducts(string basePath)
+        {
+            string[] files = { @"\pizza_ingredienten.xlsx", @"\Overige producten.xlsx", @"\pizzabodems.xlsx" };
+            List<Product> result = new List<Product>();
+            var pizzaList = GetProductWithDescription(basePath + files[0]);
+            foreach (Product product in pizzaList)
+            {
+                product.Ingredients = GetIngredients(basePath + files[0], product.Name);
+                product.Categories = GetCategories(basePath, product.Name);
+            }
+            var productList = GetProductWithDescription(basePath + files[1]);
+            foreach (Product product in productList)
+            {
+                product.Categories = GetCategories(basePath, product.Name);
+            }
+            result.AddRange(pizzaList);
+            result.AddRange(productList);
+            result.AddRange(GetIngredients(basePath + files[0]));
+            result.AddRange(GetPizzaBottom(basePath + files[2]));
             return result;
+        }
+
+        private static List<Product> GetProductWithDescription(string pathToFile)
+        {
+            List<Product> result = new List<Product>();
+
+            using (FileStream stream = File.OpenRead(pathToFile))
+            using (IExcelDataReader dr = ExcelReaderFactory.CreateOpenXmlReader(stream))
+            {
+                int nameColumn = -1;
+                int descriptionColumn = -1;
+                int priceColumn = -1;
+                int spicyColumn = -1;
+                int vegetarianColumn = -1;
+                int addChargeColumn = -1;
+                DataSet data = dr.AsDataSet();
+                var table = data.Tables[0];
+                for (int rowCount = 0; rowCount < table.Rows.Count; rowCount++)
+                {
+                    if (rowCount == 0)
+                    {
+                        for (int columnCount = 0; columnCount < table.Rows[rowCount].ItemArray.Length; columnCount++)
+                        {
+                            string columnHeader = table.Rows[rowCount].ItemArray[columnCount].ToString().ToLower();
+                            if (columnHeader.ToLower().Contains("productnaam"))
+                            {
+                                nameColumn = columnCount;
+                            }
+                            else if (columnHeader.ToLower().Contains("productomschrijving"))
+                            {
+                                descriptionColumn = columnCount;
+                            }
+                            else if (columnHeader.ToLower().Contains("prijs"))
+                            {
+                                priceColumn = columnCount;
+                            }
+                            else if (columnHeader.ToLower().Contains("spicy"))
+                            {
+                                spicyColumn = columnCount;
+                            }
+                            else if (columnHeader.ToLower().Contains("vegetarisch"))
+                            {
+                                vegetarianColumn = columnCount;
+                            }
+                            else if (columnHeader.ToLower().Contains("bezorgtoeslag"))
+                            {
+                                addChargeColumn = columnCount;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Product foundProduct = new Product
+                        {
+                            Name = nameColumn == -1 ? "" : table.Rows[rowCount].ItemArray[nameColumn].ToString().ToLower(),
+                            Description = descriptionColumn == -1 ? "" : table.Rows[rowCount].ItemArray[descriptionColumn].ToString().ToLower(),
+                            Price = priceColumn == -1 ? "0" : table.Rows[rowCount].ItemArray[priceColumn].ToString().ToLower(),
+                            Spicy = spicyColumn == -1 ? false : table.Rows[rowCount].ItemArray[spicyColumn].ToString().ToLower() == "nee" ? false : true,
+                            Vegetarisch = vegetarianColumn == -1 ? false : table.Rows[rowCount].ItemArray[vegetarianColumn].ToString().ToLower() == "nee" ? false : true,
+                            AdditionalCharge = addChargeColumn == -(1) ? "0" : table.Rows[rowCount].ItemArray[addChargeColumn].ToString().ToLower(),
+                        };
+                        result.Add(foundProduct);
+                    }
+                }
+            }
+            return result.DistinctBy(p => p.Name).ToList();
+        }
+
+        private static List<Product> GetPizzaBottom(string pathToFile)
+        {
+            List<Product> result = new List<Product>();
+
+            using (FileStream stream = File.OpenRead(pathToFile))
+            using (IExcelDataReader dr = ExcelReaderFactory.CreateOpenXmlReader(stream))
+            {
+                int nameColumn = -1;
+                int descriptionColumn = -1;
+                int priceColumn = -1;
+                int sizeColumn = -1;
+                DataSet data = dr.AsDataSet();
+                var table = data.Tables[0];
+                for (int rowCount = 0; rowCount < table.Rows.Count; rowCount++)
+                {
+                    if (rowCount == 0)
+                    {
+                        for (int columnCount = 0; columnCount < table.Rows[rowCount].ItemArray.Length; columnCount++)
+                        {
+                            string columnHeader = table.Rows[rowCount].ItemArray[columnCount].ToString().ToLower();
+                            if (columnHeader.ToLower().Contains("naam"))
+                            {
+                                nameColumn = columnCount;
+                            }
+                            else if (columnHeader.ToLower().Contains("omschrijving"))
+                            {
+                                descriptionColumn = columnCount;
+                            }
+                            else if (columnHeader.ToLower().Contains("toeslag"))
+                            {
+                                priceColumn = columnCount;
+                            }
+                            else if (columnHeader.ToLower().Contains("diameter"))
+                            {
+                                sizeColumn = columnCount;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Product foundProduct = new Product
+                        {
+                            Name = nameColumn == -1 ? "" : table.Rows[rowCount].ItemArray[nameColumn].ToString().ToLower(),
+                            Description = descriptionColumn == -1 ? "" : table.Rows[rowCount].ItemArray[descriptionColumn].ToString().ToLower(),
+                            Price = priceColumn == -1 ? "0" : table.Rows[rowCount].ItemArray[priceColumn].ToString().ToLower(),
+                            UOM = "cm",
+                            Size = sizeColumn == -1 ? 0 : Convert.ToInt32(table.Rows[rowCount].ItemArray[sizeColumn].ToString().ToLower()),
+                            Categories = new List<string> { "pizzabodem" }
+                        };
+                        result.Add(foundProduct);
+                    }
+                }
+            }
+            return result.DistinctBy(p => p.Name).ToList();
+        }
+
+        private static List<Product> GetIngredients(string pathToFile, string productName = "")
+        {
+            List<Product> result = new List<Product>();
+            List<Product> ProductSpecificResult = new List<Product>();
+            using (FileStream stream = File.OpenRead(pathToFile))
+            using (IExcelDataReader dr = ExcelReaderFactory.CreateOpenXmlReader(stream))
+            {
+                int productColumn = -1;
+                int nameColumn = -1;
+                int amountColumn = -1;
+                int sauceColumn = -1;
+                DataSet data = dr.AsDataSet();
+                var table = data.Tables[0];
+                for (int rowCount = 0; rowCount < table.Rows.Count; rowCount++)
+                {
+                    if (rowCount == 0)
+                    {
+                        for (int columnCount = 0; columnCount < table.Rows[rowCount].ItemArray.Length; columnCount++)
+                        {
+                            string columnHeader = table.Rows[rowCount].ItemArray[columnCount].ToString().ToLower();
+                            if (columnHeader.ToLower().Contains("ingredientnaam"))
+                            {
+                                nameColumn = columnCount;
+                            }
+                            else if (columnHeader.ToLower().Contains("aantalkeer_ingredient"))
+                            {
+                                amountColumn = columnCount;
+                            }
+                            else if (columnHeader.ToLower().Contains("productnaam"))
+                            {
+                                productColumn = columnCount;
+                            }
+                            else if (columnHeader.ToLower().Contains("pizzasaus_standaard"))
+                            {
+                                sauceColumn = columnCount;
+                            }
+
+                        }
+                    }
+                    else
+                    {
+                        if (!string.IsNullOrEmpty(productName) && table.Rows[rowCount].ItemArray[productColumn].ToString().ToLower() == productName)
+                        {
+                            ProductSpecificResult.Add(new Product
+                            {
+                                Name = table.Rows[rowCount].ItemArray[nameColumn].ToString().ToLower(),
+                                amount = Convert.ToInt32(table.Rows[rowCount].ItemArray[amountColumn].ToString().ToLower()),
+                                Categories = new List<string> { "ingredient" }
+                            });
+                            ProductSpecificResult.Add(new Product
+                            {
+                                Name = table.Rows[rowCount].ItemArray[sauceColumn].ToString().ToLower(),
+                                amount = 1,
+                                Categories = new List<string> { "ingredient" }
+                            });
+                        }
+                        else
+                        {
+                            result.Add(new Product
+                            {
+                                Name = table.Rows[rowCount].ItemArray[nameColumn].ToString().ToLower(),
+                                Categories = new List<string> { "ingredient" }
+                            });
+                            result.Add(new Product
+                            {
+                                Name = table.Rows[rowCount].ItemArray[sauceColumn].ToString().ToLower(),
+                                Categories = new List<string> { "ingredient" }
+                            });
+                        }
+                    }
+                }
+            }
+            if (!string.IsNullOrEmpty(productName))
+            {
+                return ProductSpecificResult.DistinctBy(p => p.Name).ToList();
+            }
+            return result.DistinctBy(p => p.Name).ToList();
+        }
+
+        private static void WriteCategoriesToDB(List<String> categories)
+        {
+            var cnts = "Data Source = sql6009.site4now.net; Initial Catalog = DB_A2C9F3_MarioPizza; Persist Security Info = True; User ID = DB_A2C9F3_MarioPizza_admin; Password = Februarie2020!";
+            
+            using (SqlConnection cnx = new SqlConnection(cnts))
+            {
+                cnx.Open();
+                SqlCommand cmd = new SqlCommand();
+                cmd.Connection = cnx;
+                cmd.CommandText = "insert INTO [ProductCategory-QL](Name) VALUES (@name)";
+                foreach (string str in categories)
+                {
+                    cmd.Parameters.Clear();
+                    cmd.Parameters.AddWithValue("@name", str);
+                    if(cmd.ExecuteNonQuery() > 0)
+                    {
+                        Console.WriteLine("Categorie written to db with success");
+                    }
+                }
+            }
+        }
+
+        private static void WriteProductsToDB(List<Product> products)
+        {
+            var cnts = "Data Source = sql6009.site4now.net; Initial Catalog = DB_A2C9F3_MarioPizza; Persist Security Info = True; User ID = DB_A2C9F3_MarioPizza_admin; Password = Februarie2020!";
+            using (SqlConnection cnx = new SqlConnection(cnts))
+            {
+                cnx.Open();
+                SqlCommand cmd = new SqlCommand();
+                cmd.Connection = cnx;
+                cmd.CommandText = "insert INTO [Product-QL](Name, Description, Size) VALUES (@name, @Description, @Size)";
+                foreach (Product str in products)
+                {
+                    cmd.Parameters.Clear();
+                    cmd.Parameters.AddWithValue("@name", str.Name);
+                    cmd.Parameters.AddWithValue("@Description", string.IsNullOrEmpty(str.Description) ? "" : str.Description);
+                    cmd.Parameters.AddWithValue("@Size", str.Size);
+                    if (cmd.ExecuteNonQuery() > 0)
+                    {
+                        Console.WriteLine("Product written to db with success");
+                    }
+                }
+            }
         }
     }
 }
