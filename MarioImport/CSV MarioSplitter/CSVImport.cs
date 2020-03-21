@@ -22,10 +22,12 @@ namespace CSV_MarioSplitter
             SqlCommand cmdAddress = new SqlCommand();
             SqlCommand cmdCustomer = new SqlCommand();
             SqlCommand cmdOrderLineData = new SqlCommand();
+            SqlCommand cmdOrderLineModification = new SqlCommand();
 
             Boolean isHeader = false;
             int OrderId = 0;
             string Zipcode = "";
+            List<string> ExtraIngredients = new List<string>();
 
             DataTable table = ConvertCSVtoDataTable(@"B:\Downloads\MarioData (1)\MarioOrderData02_10000.csv",true);
 
@@ -37,11 +39,13 @@ namespace CSV_MarioSplitter
             cmdAddress.Connection = cnx;
             cmdCustomer.Connection = cnx;
             cmdOrderLineData.Connection = cnx;
+            cmdOrderLineModification.Connection = cnx;
 
             //Import orders
             foreach (DataRow dataRow in table.Rows)
             {
                 isHeader = false;
+                ExtraIngredients.Clear();
 
                 if (dataRow.ItemArray.GetValue(0) != "")
                 {
@@ -133,6 +137,14 @@ namespace CSV_MarioSplitter
                     cmdOrderLineData.Parameters.AddWithValue("@OrderHeaderID", OrderId);
                     cmdOrderLineData.Parameters.AddWithValue("@ProductID", dataRow.ItemArray.GetValue(10));
 
+                    //if (dataRow.ItemArray.GetValue(16) != "")
+                    //{
+                    //    cmdOrderLineModification.CommandText = "INSERT INTO [Order_Line_Modification-QL] (ID,ProductID,Quantity,OrderLineID,UOMD) VALUES (@ID,@ProductID,@Quantity,OrderLineID,UOMID)";
+                    //    cmdOrderLineModification.Parameters.AddWithValue("", "");
+                    //    cmdOrderLineModification.Parameters.AddWithValue("", "");
+                    //    cmdOrderLineModification.Parameters.AddWithValue("", "");
+                    //    cmdOrderLineModification.Parameters.AddWithValue("", "");
+                    //}
 
                     //Construct Customer query
                     cmdCustomer.CommandText = "INSERT INTO [Customer-QL] (ID,Name,Email,Phonenumber ) VALUES(@CustID,@CustName,@CustEmail,@CustPhoneNumber)";
@@ -170,7 +182,6 @@ namespace CSV_MarioSplitter
                         cmdAddress.Parameters.AddWithValue("@AddressStreetname", "");
                     }
                     cmdAddress.Parameters.AddWithValue("@AddressCity", dataRow.ItemArray.GetValue(5));
-
 
                 }
                 else
@@ -247,7 +258,7 @@ namespace CSV_MarioSplitter
             };
 
             cmd.Parameters.AddWithValue("@StreetName", streetName);
-            cmd.Parameters.AddWithValue("@City", city);
+            cmd.Parameters.AddWithValue("@City", city.ToUpper());
             if (int.TryParse(houseNumber, out _))
             {
                 cmd.Parameters.AddWithValue("@HouseNumber", houseNumber);
