@@ -20,7 +20,7 @@ namespace MarioImport
         public CSVImport(string basePath)
         {
             path = basePath;
-        } 
+        }
 
         public void importCSV()
         {
@@ -35,7 +35,7 @@ namespace MarioImport
             string Zipcode = "";
             List<string> ExtraIngredients = new List<string>();
 
-            DataTable table = ConvertCSVtoDataTable(path + @"\MarioOrderData02_10000.csv",true);
+            DataTable table = ConvertCSVtoDataTable(path + @"\MarioOrderData02_10000.csv", true);
 
             DumpDataTable(table);
 
@@ -64,7 +64,7 @@ namespace MarioImport
                     //Get ZipCode from access database
                     if (addressInfo.Count > 1)
                     {
-                        Zipcode = GetZipCode(addressInfo[0], addressInfo[1],dataRow.ItemArray.GetValue(5).ToString());
+                        Zipcode = GetZipCode(addressInfo[0], addressInfo[1], dataRow.ItemArray.GetValue(5).ToString());
                     }
 
 
@@ -250,12 +250,12 @@ namespace MarioImport
             }
             return addressInfo;
         }
-        public string GetZipCode(string streetName, string houseNumber,string city)
+        public string GetZipCode(string streetName, string houseNumber, string city)
         {
             string result = "";
 
             OleDbConnection accessConn = new OleDbConnection(@"Provider = Microsoft.Jet.OLEDB.4.0; Data Source = " + path + @"\Postcode tabel.mdb");
-            
+
             OleDbCommand cmd = new OleDbCommand
             {
                 Connection = accessConn,
@@ -275,7 +275,7 @@ namespace MarioImport
                 OleDbDataReader reader = cmd.ExecuteReader();
                 if (!reader.HasRows)
                 {
-                    
+
                     result = "";
                 }
                 else
@@ -304,7 +304,7 @@ namespace MarioImport
             SqlCommand cmdProducts = new SqlCommand();
             SqlCommand cmdPrice = new SqlCommand();
 
-            DataTable productTable = ConvertCSVtoDataTable(path + @"\Extra Ingredienten.csv",false);
+            DataTable productTable = ConvertCSVtoDataTable(path + @"\Extra Ingredienten.csv", false);
 
             cnx.Open();
 
@@ -328,7 +328,7 @@ namespace MarioImport
                     cmdProducts.ExecuteNonQuery();
                     cmdPrice.ExecuteNonQuery();
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
                     Console.WriteLine(e);
                     break;
@@ -342,7 +342,7 @@ namespace MarioImport
             cnx.Close();
         }
 
-        public DataTable ConvertCSVtoDataTable(string strFilePath,bool needSkipLine)
+        public DataTable ConvertCSVtoDataTable(string strFilePath, bool needSkipLine)
         {
             DataTable dt = new DataTable();
             using (StreamReader sr = new StreamReader(strFilePath))
@@ -383,7 +383,7 @@ namespace MarioImport
 
             return dt;
         }
-        public  Boolean CheckRowEmpty(DataRow LocalDataRow, int Columns)
+        public Boolean CheckRowEmpty(DataRow LocalDataRow, int Columns)
         {
             Boolean Empty = true;
             for (int i = 0; i < Columns; i++)
