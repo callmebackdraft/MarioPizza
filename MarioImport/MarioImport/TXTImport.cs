@@ -130,11 +130,11 @@ namespace MarioImport
 
             foreach (Store store in stores)
             {
-
-                cmd.CommandText = "insert INTO [Store-QL](Name, Description, PhoneNumber) VALUES (@name, @discription, @phonenumber)";
+                cmd.CommandText = "insert INTO [Store-QL](Name, Description, PhoneNumber, AddressID) VALUES (@name, @discription, @phonenumber, @adressid)";
                 cmd.Parameters.AddWithValue("@name", store.name);
                 cmd.Parameters.AddWithValue("@discription", store.name);
                 cmd.Parameters.AddWithValue("@phonenumber", store.phoneNumber);
+                cmd.Parameters.AddWithValue("@adressid", (store.zipCode + "," + store.homeNumber + "," + store.homeNumberSuffix));
                 cmd2.CommandText = "insert INTO [Address-QL](ZipCode, HouseNumber, HouseNumberAddition, Streetname, City, State, CountryID) VALUES (@ZipCode, @HouseNumber, @HouseNumberAddition, @Streetname, @City, @State, @Country)";
                 cmd2.Parameters.AddWithValue("@ZipCode", store.zipCode);
                 cmd2.Parameters.AddWithValue("@HouseNumber", store.homeNumber);
