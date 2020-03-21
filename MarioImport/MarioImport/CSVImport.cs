@@ -35,7 +35,7 @@ namespace MarioImport
             string Zipcode = "";
             List<string> ExtraIngredients = new List<string>();
 
-            DataTable table = ConvertCSVtoDataTable(path + @"\MarioOrderData03_10000.csv",true);
+            DataTable table = ConvertCSVtoDataTable(path + @"\MarioOrderData03_10000.csv", true);
 
             DumpDataTable(table);
 
@@ -61,7 +61,7 @@ namespace MarioImport
                     List<string> addressInfo = new List<string>();
                     addressInfo = AdressSplitter(dataRow.ItemArray.GetValue(4).ToString());
 
-                    
+
                     //Get ZipCode from access database
                     if (addressInfo.Count > 1)
                     {
@@ -69,7 +69,7 @@ namespace MarioImport
                         {
                             Zipcode = GetZipCode(addressInfo[0], addressInfo[1], dataRow.ItemArray.GetValue(5).ToString());
                         }
-                        catch(Exception e)
+                        catch (Exception e)
                         {
                             Console.WriteLine(e.Message);
                         }
@@ -259,43 +259,25 @@ namespace MarioImport
             return addressInfo;
         }
 
-        public string GetZipCode(string streetName, string houseNumber,string city)
+        public string GetZipCode(string streetName, string houseNumber, string city)
         {
             string result = "";
-            
-            OleDbConnection accessConn = new OleDbConnection(@"Provider = Microsoft.Jet.OLEDB.4.0; Data Source = " + path + @"\Postcode tabel.mdb");
 
             OleDbCommand cmd = new OleDbCommand
             {
-                Connection = accessConn,
+                Connection = new OleDbConnection(@"Provider = Microsoft.Jet.OLEDB.4.0; Data Source = " + path + @"\Postcode tabel.mdb"),
                 CommandType = CommandType.Text,
-                CommandText = "SELECT TOP 1 A13_POSTCODE FROM POSTCODES WHERE A13_WOONPLAATS = '@City' AND A13_STRAATNAAM = '@StreetName' AND  @HouseNumber BETWEEN A13_BREEKPUNT_VAN AND A13_BREEKPUNT_TEM"
-                //CommandText = "SELECT TOP 1 A13_POSTCODE FROM POSTCODES WHERE A13_WOONPLAATS= 'ROTTERDAM' AND A13_STRAATNAAM = 'Groene Tuin' AND 151 BETWEEN A13_BREEKPUNT_VAN AND A13_BREEKPUNT_TEM",
+                CommandText = string.Format("SELECT TOP 1 * FROM POSTCODES WHERE A13_WOONPLAATS = '{0}' AND A13_STRAATNAAM = '{1}' AND ({2} BETWEEN A13_BREEKPUNT_VAN AND A13_BREEKPUNT_TEM)", city.ToLower(), streetName.ToLower(), houseNumber)
+                //CommandText = "SELECT TOP 1 A13_POSTCODE FROM POSTCODES WHERE A13_WOONPLAATS= 'Groningen' AND A13_STRAATNAAM = 'Adriaan Pauwstraat' AND 19 BETWEEN A13_BREEKPUNT_VAN AND A13_BREEKPUNT_TEM",
             };
+            OleDbDataAdapter adapter = new OleDbDataAdapter(cmd);
+            DataTable dt = new DataTable();
 
-            cmd.Parameters.AddWithValue("@StreetName", streetName.ToLower());
-            cmd.Parameters.AddWithValue("@City", city.ToLower());
-
-            int n = 0;
-            if (int.TryParse(houseNumber, out n))
-            {
-                cmd.Parameters.AddWithValue("@HouseNumber", n);
-            }
             try
             {
-                accessConn.Open();
-                OleDbDataReader reader = cmd.ExecuteReader();
-                if (!reader.HasRows)
-                {
-                    throw new Exception("Zipcode has not been found");
-                }
-                else
-                {
-                    while (reader.Read())
-                    {
-                        result = reader.GetString(0);
-                    }
-                }
+                cmd.Connection.Open();
+                adapter.Fill(dt);
+                result = dt.Rows[0].ItemArray[0].ToString();
             }
             catch (Exception e)
             {
@@ -304,7 +286,7 @@ namespace MarioImport
             finally
             {
                 cmd.Parameters.Clear();
-                accessConn.Close();
+                cmd.Connection.Close();
             }
 
             return result;

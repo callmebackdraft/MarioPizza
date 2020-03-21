@@ -22,9 +22,9 @@ namespace MarioImport
             string basePath = configuration.GetSection("BasePath").Value;
             Console.WriteLine(configuration.GetConnectionString("Storage"));
             System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
-            TestDennis(basePath);
+            //TestDennis(basePath);
             //TestJos(basePath);
-            //TestChris(basePath);
+            TestChris(basePath);
         }
 
         private static void TestChris(string path)
