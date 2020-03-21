@@ -13,13 +13,13 @@ namespace MarioImport
     {
         //const string basePath = @"C:\Users\tonyw\source\repos\MarioImport\Data";
         //const string basePath = @"C:\Users\tonyw\source\repos\MarioImport\Data";
-        const string basePath = @"C:\Users\tonyw\source\repos\MarioImport\Data";
+        const string basePath = @"B:\Downloads\MarioData (1)";
 
         static void Main(string[] args)
         {
             System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
-            TestDennis(basePath);
-            TestJos(basePath);
+            //TestDennis(basePath);
+            //TestJos(basePath);
             TestChris(basePath);
         }
 
