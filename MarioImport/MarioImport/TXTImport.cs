@@ -9,9 +9,15 @@ namespace MarioImport
 {
     class TXTImport
     {
-        string[] lines = File.ReadAllLines(@"C:\Users\tonyw\source\repos\MarioImport\Data\Winkels Mario.txt");
+        private string path;
+        string[] lines;
         List<Store> stores = new List<Store>();
         Dictionary<Store, string> storeDictoinary = new Dictionary<Store, string>();
+        public TXTImport(string basePath)
+        {
+            path = basePath;
+            lines = File.ReadAllLines(path + @"\Winkels Mario.txt");
+        }
 
         public void textImport()
         {
@@ -78,7 +84,7 @@ namespace MarioImport
             }
             Console.WriteLine("\n\nall the nonvalid stores:");
             using (System.IO.StreamWriter file =
-            new System.IO.StreamWriter(@"C:\Users\tonyw\source\repos\MarioImport\Data\WriteLines2.txt"))
+            new System.IO.StreamWriter(path + @"\WriteLines2.txt"))
             {
                 file.Write(JsonConvert.SerializeObject(storeDictoinary, Formatting.Indented));
             }

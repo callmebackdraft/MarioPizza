@@ -11,45 +11,31 @@ namespace MarioImport
 {
     class Program
     {
+        //const string basePath = @"C:\Users\tonyw\source\repos\MarioImport\Data";
+        const string basePath = @"C:\Users\tonyw\source\repos\MarioImport\Data";
+
         static void Main(string[] args)
         {
             System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+            TestDennis(basePath);
+            test(basePath);
+        }
+
+        private static void TestDennis(string path)
+        {
             string basePath = @"C:\Users\tonyw\source\repos\MarioImport\Data";
             var x = GetProducts(basePath);
-            //WriteCategoriesToDB(GetCategories(basePath));
+            WriteCategoriesToDB(GetCategories(basePath));
             WriteProductsToDB(x);
-            foreach (Product product in x)
-            {
-                Console.WriteLine("------------------------------------------");
-                Console.WriteLine(product.Name);
-                foreach (string str in product.Categories)
-                {
-                    Console.WriteLine("Category: {0}", str);
-                }
-                Console.WriteLine("Price: {0}",product.Price);
-                if (product.Ingredients != null)
-                {
-                    foreach (Product product1 in product.Ingredients)
-                    {
-                        Console.WriteLine("Ingredient: {0} - Amount: {1}", product1.Name, product1.amount);
-                    }
-                }
-
-            }
-
-            //test();
-            //foreach (string str in GetCategories(basePath))
-            //{
-            //    Console.WriteLine(str);
-            //}
-
         }
-        private static void test()
+
+        private static void test(string path)
         {
-            TXTImport import = new TXTImport();
+            TXTImport import = new TXTImport(path);
             import.textImport();
             import.databasewrite();
         }
+
         private static List<string> GetCategories(string basePath, string productSpecific = "")
         {
             string[] files = { @"\pizza_ingredienten.xlsx", @"\Overige producten.xlsx" };
