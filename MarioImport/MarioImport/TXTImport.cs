@@ -82,7 +82,8 @@ namespace MarioImport
             {
                 Console.WriteLine(s.ToString());
             }
-            Console.WriteLine("\n\nall the nonvalid stores:");
+            Console.WriteLine("all the nonvalid stores:");
+            File.Delete(path + @"\WriteLines2.txt"); File.Delete(path + @"\WriteLines2.txt");
             using (System.IO.StreamWriter file =
             new System.IO.StreamWriter(path + @"\WriteLines2.txt"))
             {

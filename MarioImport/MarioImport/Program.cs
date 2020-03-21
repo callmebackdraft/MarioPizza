@@ -12,24 +12,32 @@ namespace MarioImport
     class Program
     {
         //const string basePath = @"C:\Users\tonyw\source\repos\MarioImport\Data";
+        //const string basePath = @"C:\Users\tonyw\source\repos\MarioImport\Data";
         const string basePath = @"C:\Users\tonyw\source\repos\MarioImport\Data";
 
         static void Main(string[] args)
         {
             System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
             TestDennis(basePath);
-            test(basePath);
+            TestJos(basePath);
+            TestChris(basePath);
+        }
+
+        private static void TestChris(string path)
+        {
+            CSVImport csvImport = new CSVImport(path);
+            csvImport.importCSV();
+            csvImport.importIngredients();
         }
 
         private static void TestDennis(string path)
-        {
-            string basePath = @"C:\Users\tonyw\source\repos\MarioImport\Data";
-            var x = GetProducts(basePath);
-            WriteCategoriesToDB(GetCategories(basePath));
+        { 
+            var x = GetProducts(path);
+            WriteCategoriesToDB(GetCategories(path));
             WriteProductsToDB(x);
         }
 
-        private static void test(string path)
+        private static void TestJos(string path)
         {
             TXTImport import = new TXTImport(path);
             import.textImport();
