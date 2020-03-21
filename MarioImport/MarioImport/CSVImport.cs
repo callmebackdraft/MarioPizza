@@ -20,7 +20,7 @@ namespace MarioImport
         public CSVImport(string basePath)
         {
             path = basePath;
-        } 
+        }
 
         public void importCSV()
         {
@@ -315,7 +315,7 @@ namespace MarioImport
             SqlCommand cmdProducts = new SqlCommand();
             SqlCommand cmdPrice = new SqlCommand();
 
-            DataTable productTable = ConvertCSVtoDataTable(path + @"\Extra Ingredienten.csv",false);
+            DataTable productTable = ConvertCSVtoDataTable(path + @"\Extra Ingredienten.csv", false);
 
             cnx.Open();
 
@@ -339,7 +339,7 @@ namespace MarioImport
                     cmdProducts.ExecuteNonQuery();
                     cmdPrice.ExecuteNonQuery();
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
                     Console.WriteLine(e);
                     break;
@@ -353,7 +353,7 @@ namespace MarioImport
             cnx.Close();
         }
 
-        public DataTable ConvertCSVtoDataTable(string strFilePath,bool needSkipLine)
+        public DataTable ConvertCSVtoDataTable(string strFilePath, bool needSkipLine)
         {
             DataTable dt = new DataTable();
             using (StreamReader sr = new StreamReader(strFilePath))
@@ -394,7 +394,7 @@ namespace MarioImport
 
             return dt;
         }
-        public  Boolean CheckRowEmpty(DataRow LocalDataRow, int Columns)
+        public Boolean CheckRowEmpty(DataRow LocalDataRow, int Columns)
         {
             Boolean Empty = true;
             for (int i = 0; i < Columns; i++)

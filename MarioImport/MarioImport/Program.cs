@@ -6,21 +6,25 @@ using System.Linq;
 using ExcelDataReader;
 using MoreLinq;
 using System.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
 
 namespace MarioImport
 {
     class Program
     {
-        //const string basePath = @"C:\Users\tonyw\source\repos\MarioImport\Data";
-        //const string basePath = @"C:\Users\tonyw\source\repos\MarioImport\Data";
-        const string basePath = @"B:\Downloads\MarioData (1)";
-
         static void Main(string[] args)
         {
+            var builder = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+
+            IConfigurationRoot configuration = builder.Build();
+            string basePath = configuration.GetSection("BasePath").Value;
+            Console.WriteLine(configuration.GetConnectionString("Storage"));
             System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
-            //TestDennis(basePath);
+            TestDennis(basePath);
             //TestJos(basePath);
-            TestChris(basePath);
+            //TestChris(basePath);
         }
 
         private static void TestChris(string path)
@@ -31,7 +35,7 @@ namespace MarioImport
         }
 
         private static void TestDennis(string path)
-        { 
+        {
             var x = GetProducts(path);
             WriteCategoriesToDB(GetCategories(path));
             WriteProductsToDB(x);
@@ -358,7 +362,7 @@ namespace MarioImport
         private static void WriteCategoriesToDB(List<String> categories)
         {
             var cnts = "Data Source = sql6009.site4now.net; Initial Catalog = DB_A2C9F3_MarioPizza; Persist Security Info = True; User ID = DB_A2C9F3_MarioPizza_admin; Password = Februarie2020!";
-            
+
             using (SqlConnection cnx = new SqlConnection(cnts))
             {
                 cnx.Open();
@@ -369,7 +373,7 @@ namespace MarioImport
                 {
                     cmd.Parameters.Clear();
                     cmd.Parameters.AddWithValue("@name", str);
-                    if(cmd.ExecuteNonQuery() > 0)
+                    if (cmd.ExecuteNonQuery() > 0)
                     {
                         Console.WriteLine("Categorie written to db with success");
                     }
