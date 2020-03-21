@@ -20,7 +20,7 @@ namespace MarioImport
 
             IConfigurationRoot configuration = builder.Build();
             string basePath = configuration.GetSection("BasePath").Value;
-            Console.WriteLine(configuration.GetConnectionString("Storage"));
+            //Console.WriteLine(configuration.GetConnectionString("Storage"));
             System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
             //TestDennis(basePath);
             //TestJos(basePath);

@@ -56,7 +56,7 @@ namespace MarioImport
                 if (dataRow.ItemArray.GetValue(0) != "")
                 {
                     OrderId++;
-
+                    Zipcode = "";
                     //Split address field into Streetname, house number and house number addition
                     List<string> addressInfo = new List<string>();
                     addressInfo = AdressSplitter(dataRow.ItemArray.GetValue(4).ToString());
@@ -378,10 +378,11 @@ namespace MarioImport
         }
         public Boolean CheckRowEmpty(DataRow LocalDataRow, int Columns)
         {
+            char[] cc = { '{', '}' };
             Boolean Empty = true;
             for (int i = 0; i < Columns; i++)
             {
-                if (LocalDataRow[i] != "")
+                if (LocalDataRow[i].ToString().Trim(cc) != "" )
                 {
                     Empty = false;
                 }
