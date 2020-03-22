@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.OleDb;
 using System.Data.SqlClient;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -29,8 +30,8 @@ namespace MarioImport
             SqlCommand cmdAddress = new SqlCommand();
             SqlCommand cmdCustomer = new SqlCommand();
             SqlCommand cmdOrderLineData = new SqlCommand();
-            
 
+            
             Boolean isHeader;
             string OrderId = "";
             string Zipcode;
@@ -50,7 +51,7 @@ namespace MarioImport
             cmdOrderLineModification.Connection = cnx;
 
             bool SkipImport = false;
-
+            DateTime deliveryDateTime;
 
             //Import orders
             foreach (DataRow dataRow in table.Rows)
@@ -116,7 +117,8 @@ namespace MarioImport
                         "ZipCode," +
                         "HousNumber," +
                         "HouseNumberAddition," +
-                        "Deliverytime) " +
+                        "Deliverytime," +
+                        "CurrencyID) " +
                         "VALUES (" +
                         "@ID," +
                         "@Customer," +
@@ -129,23 +131,27 @@ namespace MarioImport
                         "@ZipCode," +
                         "@HousNumber," +
                         "@HouseNumberAdditon," +
-                        "@Deliverytime) ";
-
+                        "@Deliverytime," +
+                        "@Currency) ";
+                    CultureInfo culture = new CultureInfo("nl-NL");
+                    DateTime date = Convert.ToDateTime(dataRow.ItemArray.GetValue(6).ToString(), culture);
                     cmdOrderData.Parameters.AddWithValue("@ID", OrderId);
-                    cmdOrderData.Parameters.AddWithValue("@Customer", OrderId); // Import Customer
-                    cmdOrderData.Parameters.AddWithValue("@OrderDate", dataRow.ItemArray.GetValue(6));
+                    //cmdOrderData.Parameters.AddWithValue("@Customer", OrderId); // Import Customer
+                    cmdOrderData.Parameters.AddWithValue("@Customer", dataRow.ItemArray.GetValue(3)); // Import Customer
+                    cmdOrderData.Parameters.AddWithValue("@OrderDate", date);
                     cmdOrderData.Parameters.AddWithValue("@StoreID", dataRow.ItemArray.GetValue(0));
                     cmdOrderData.Parameters.AddWithValue("@StatusID", "");
                     cmdOrderData.Parameters.AddWithValue("@AddressID", OrderId); // Import Address
                     cmdOrderData.Parameters.AddWithValue("@CouponID", dataRow.ItemArray.GetValue(20));
+                   
 
-                    if (dataRow.ItemArray.GetValue(7) == "Bezorgen")
+                    if (dataRow.ItemArray.GetValue(7).ToString() == "Bezorgen")
                     {
                         cmdOrderData.Parameters.AddWithValue("@Delivery", 1);
                     }
                     else
                     {
-                        cmdOrderData.Parameters.AddWithValue("@Delivery", 1);
+                        cmdOrderData.Parameters.AddWithValue("@Delivery",0);
                     }
 
                     cmdOrderData.Parameters.AddWithValue("@ZipCode", Zipcode);
@@ -167,7 +173,17 @@ namespace MarioImport
                     {
                         cmdOrderData.Parameters.AddWithValue("@HouseNumberAdditon", "");
                     }
-                    cmdOrderData.Parameters.AddWithValue("@Deliverytime", dataRow.ItemArray.GetValue(8) + " " + dataRow.ItemArray.GetValue(9));
+                    if (dataRow.ItemArray.GetValue(9).ToString()  == "As soon as possible.")
+                    {
+                        deliveryDateTime = Convert.ToDateTime(dataRow.ItemArray.GetValue(8) , culture);
+                    }
+                    else
+                    {
+                        deliveryDateTime = Convert.ToDateTime(dataRow.ItemArray.GetValue(8) + " " + dataRow.ItemArray.GetValue(9), culture);
+                    }
+                    
+                    cmdOrderData.Parameters.AddWithValue("@Deliverytime", deliveryDateTime);
+                    cmdOrderData.Parameters.AddWithValue("@Currency", "EUR");
 
                     //Construct orderline query
                     cmdOrderLineData.CommandText = "INSERT INTO [OrderLine-QL] (ID,Quantity,PricePaid,OrderHeaderID,ProductID) VALUES (@ID,@LineQuantity,@LinePricePaid,@OrderHeaderID,@ProductID)";
