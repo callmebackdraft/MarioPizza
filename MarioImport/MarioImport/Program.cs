@@ -23,14 +23,17 @@ namespace MarioImport
             //Console.WriteLine(configuration.GetConnectionString("Storage"));
             System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
             //TestDennis(basePath);
-            TestJos(basePath);
-            //TestChris(basePath);
+            //TestJos(basePath);
+            TestChris(basePath);
         }
 
         private static void TestChris(string path)
         {
             CSVImport csvImport = new CSVImport(path);
-            csvImport.importCSV();
+            csvImport.importCSV("MarioOrderData01_10000.csv");
+            csvImport.importCSV("MarioOrderData02_10000.csv");
+            csvImport.importCSV("MarioOrderData03_10000.csv");
+            csvImport.importCSV("MarioOrderData04_10000.csv");
             csvImport.importIngredients();
         }
 

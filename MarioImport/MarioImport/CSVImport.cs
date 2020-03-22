@@ -4,6 +4,7 @@ using System.Data;
 using System.Data.OleDb;
 using System.Data.SqlClient;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -13,29 +14,30 @@ namespace MarioImport
     {
         private string path;
 
-        static string sqlConn = "Data Source=sql6009.site4now.net;Initial Catalog=DB_A2C9F3_MarioPizza;Persist Security Info=True;User ID=DB_A2C9F3_MarioPizza_admin;Password=Februarie2020!";
+        static readonly string sqlConn = "Data Source=sql6009.site4now.net;Initial Catalog=DB_A2C9F3_MarioPizza;Persist Security Info=True;User ID=DB_A2C9F3_MarioPizza_admin;Password=Februarie2020!";
 
         SqlConnection cnx = new SqlConnection(sqlConn);
-
+        SqlCommand cmdOrderLineModification = new SqlCommand();
         public CSVImport(string basePath)
         {
             path = basePath;
         }
 
-        public void importCSV()
+        public void importCSV(string fileName)
         {
             SqlCommand cmdOrderData = new SqlCommand();
             SqlCommand cmdAddress = new SqlCommand();
             SqlCommand cmdCustomer = new SqlCommand();
             SqlCommand cmdOrderLineData = new SqlCommand();
-            SqlCommand cmdOrderLineModification = new SqlCommand();
+            
 
-            Boolean isHeader = false;
-            int OrderId = 0;
-            string Zipcode = "";
-            List<string> ExtraIngredients = new List<string>();
+            Boolean isHeader;
+            string OrderId = "";
+            string Zipcode;
+            string[] ExtraIngredients;
 
-            DataTable table = ConvertCSVtoDataTable(path + @"\MarioOrderData03_10000.csv", true);
+            //DataTable table = ConvertCSVtoDataTable(path + @"\MarioOrderData03_10000.csv", true);
+            DataTable table = ConvertCSVtoDataTable(path + @"\" + fileName, true);
 
             DumpDataTable(table);
 
@@ -47,20 +49,25 @@ namespace MarioImport
             cmdOrderLineData.Connection = cnx;
             cmdOrderLineModification.Connection = cnx;
 
+            bool SkipImport = false;
+
+
             //Import orders
             foreach (DataRow dataRow in table.Rows)
             {
                 isHeader = false;
-                ExtraIngredients.Clear();
+                ExtraIngredients = null;
+                string OrderLineID = generateID();
 
                 if (dataRow.ItemArray.GetValue(0) != "")
                 {
-                    OrderId++;
+                    OrderId = generateID();
                     Zipcode = "";
                     //Split address field into Streetname, house number and house number addition
                     List<string> addressInfo = new List<string>();
                     addressInfo = AdressSplitter(dataRow.ItemArray.GetValue(4).ToString());
 
+                    
 
                     //Get ZipCode from access database
                     if (addressInfo.Count > 1)
@@ -77,6 +84,24 @@ namespace MarioImport
 
 
                     isHeader = true;
+                    SkipImport = false;
+
+                    if (
+                        Zipcode == ""
+                        || dataRow.ItemArray.GetValue(0).ToString() == ""
+                        || dataRow.ItemArray.GetValue(1).ToString() == ""
+                        || dataRow.ItemArray.GetValue(2).ToString() == ""
+                        || dataRow.ItemArray.GetValue(3).ToString() == ""
+                        || dataRow.ItemArray.GetValue(4).ToString() == ""
+                        || dataRow.ItemArray.GetValue(5).ToString() == ""
+                        || dataRow.ItemArray.GetValue(6).ToString() == ""
+                        || dataRow.ItemArray.GetValue(7).ToString() == ""
+                        || dataRow.ItemArray.GetValue(8).ToString() == ""
+                        || dataRow.ItemArray.GetValue(9).ToString() == ""
+                        )
+                    { 
+                        SkipImport = true; 
+                    }
 
                     //Construct orderheader query
                     cmdOrderData.CommandText = "INSERT INTO [OrderHeader-QL] (" +
@@ -145,20 +170,13 @@ namespace MarioImport
                     cmdOrderData.Parameters.AddWithValue("@Deliverytime", dataRow.ItemArray.GetValue(8) + " " + dataRow.ItemArray.GetValue(9));
 
                     //Construct orderline query
-                    cmdOrderLineData.CommandText = "INSERT INTO [OrderLine-QL] (Quantity,PricePaid,OrderHeaderID,ProductID) VALUES (@LineQuantity,@LinePricePaid,@OrderHeaderID,@ProductID)";
+                    cmdOrderLineData.CommandText = "INSERT INTO [OrderLine-QL] (ID,Quantity,PricePaid,OrderHeaderID,ProductID) VALUES (@ID,@LineQuantity,@LinePricePaid,@OrderHeaderID,@ProductID)";
+                    cmdOrderLineData.Parameters.AddWithValue("@ID", OrderLineID);
                     cmdOrderLineData.Parameters.AddWithValue("@LineQuantity", dataRow.ItemArray.GetValue(15));
                     cmdOrderLineData.Parameters.AddWithValue("@LinePricePaid", dataRow.ItemArray.GetValue(13));
                     cmdOrderLineData.Parameters.AddWithValue("@OrderHeaderID", OrderId);
                     cmdOrderLineData.Parameters.AddWithValue("@ProductID", dataRow.ItemArray.GetValue(10));
 
-                    //if (dataRow.ItemArray.GetValue(16) != "")
-                    //{
-                    //    cmdOrderLineModification.CommandText = "INSERT INTO [Order_Line_Modification-QL] (ID,ProductID,Quantity,OrderLineID,UOMD) VALUES (@ID,@ProductID,@Quantity,OrderLineID,UOMID)";
-                    //    cmdOrderLineModification.Parameters.AddWithValue("", "");
-                    //    cmdOrderLineModification.Parameters.AddWithValue("", "");
-                    //    cmdOrderLineModification.Parameters.AddWithValue("", "");
-                    //    cmdOrderLineModification.Parameters.AddWithValue("", "");
-                    //}
 
                     //Construct Customer query
                     cmdCustomer.CommandText = "INSERT INTO [Customer-QL] (ID,Name,Email,Phonenumber ) VALUES(@CustID,@CustName,@CustEmail,@CustPhoneNumber)";
@@ -168,7 +186,7 @@ namespace MarioImport
                     cmdCustomer.Parameters.AddWithValue("@CustPhoneNumber", dataRow.ItemArray.GetValue(2));
 
                     //Construct address query
-                    cmdAddress.CommandText = "INSERT INTO [Address-QL] (ID,Zipcode,Housenumber,HouseNumberAddition,Streetname,City) VALUES(@AddressID,@ZipCode,@AddressHouseNumber,@AddressHouseNumberAdditon,@AddressStreetname,@AddressCity)";
+                    cmdAddress.CommandText = "INSERT INTO [Address-QL] (ID,Zipcode,Housenumber,HouseNumberAddition,Streetname,City,CountryID) VALUES(@AddressID,@ZipCode,@AddressHouseNumber,@AddressHouseNumberAdditon,@AddressStreetname,@AddressCity,@Country)";
                     cmdAddress.Parameters.AddWithValue("@AddressID", OrderId);
                     cmdAddress.Parameters.AddWithValue("@ZipCode", Zipcode);
                     if (addressInfo.Count > 0)
@@ -196,13 +214,15 @@ namespace MarioImport
                         cmdAddress.Parameters.AddWithValue("@AddressStreetname", "");
                     }
                     cmdAddress.Parameters.AddWithValue("@AddressCity", dataRow.ItemArray.GetValue(5));
+                    cmdAddress.Parameters.AddWithValue("@Country", "NL");
 
                 }
                 else
                 {
                     isHeader = false;
                     //Construct orderline query
-                    cmdOrderLineData.CommandText = "INSERT INTO [OrderLine-QL] (Quantity,PricePaid,OrderHeaderID,ProductID) VALUES (@LineQuantity,@LinePricePaid,@OrderHeaderID,@ProductID)";
+                    cmdOrderLineData.CommandText = "INSERT INTO [OrderLine-QL] (ID,Quantity,PricePaid,OrderHeaderID,ProductID) VALUES (@ID,@LineQuantity,@LinePricePaid,@OrderHeaderID,@ProductID)";
+                    cmdOrderLineData.Parameters.AddWithValue("@ID", OrderLineID);
                     cmdOrderLineData.Parameters.AddWithValue("@LineQuantity", dataRow.ItemArray.GetValue(15));
                     cmdOrderLineData.Parameters.AddWithValue("@LinePricePaid", dataRow.ItemArray.GetValue(13));
                     cmdOrderLineData.Parameters.AddWithValue("@OrderHeaderID", OrderId);
@@ -211,18 +231,34 @@ namespace MarioImport
 
                 try
                 {
-                    if (isHeader)
+                    if (isHeader && SkipImport == false)
                     {
                         //Execute orderheader, customer and address queries
                         cmdOrderData.ExecuteNonQuery();
                         cmdCustomer.ExecuteNonQuery();
                         cmdAddress.ExecuteNonQuery();
                         cmdOrderLineData.ExecuteNonQuery();
+
+                        if(dataRow.ItemArray.GetValue(16) != "")
+                        {
+                            ExtraIngredients = dataRow.ItemArray.GetValue(16).ToString().Split(",");
+                            InsertOrderLineModificationIntoDatabase(GetDistrinctIngredients(ExtraIngredients), OrderLineID, "Stuks");
+                        }
+                            
                     }
                     else
                     {
-                        //Execute orderline query
-                        cmdOrderLineData.ExecuteNonQuery();
+                        if (SkipImport == false)
+                        {
+                            //Execute orderline query
+                            cmdOrderLineData.ExecuteNonQuery();
+
+                            if (dataRow.ItemArray.GetValue(16) != "")
+                            {
+                                ExtraIngredients = dataRow.ItemArray.GetValue(16).ToString().Split(",");
+                                InsertOrderLineModificationIntoDatabase(GetDistrinctIngredients(ExtraIngredients), OrderLineID, "Stuks");
+                            }
+                        }
                     }
                 }
                 catch (Exception e)
@@ -416,7 +452,43 @@ namespace MarioImport
             return data;
         }
 
+        public Dictionary<string,int> GetDistrinctIngredients(string [] ingredients)
+        {
+            Dictionary<string, int> CountedIngredients = ingredients.GroupBy(x => x)
+                                      .ToDictionary(g => g.Key,
+                                                    g => g.Count());
+            return CountedIngredients;
+        }
 
+        public void InsertOrderLineModificationIntoDatabase(Dictionary<string,int> Ingredients,string LineId,string UOMID)
+        {
+            int countId = 0;
+            foreach (KeyValuePair<string, int> value in Ingredients)
+            {
+                countId++;
+                try
+                {
+                    cmdOrderLineModification.CommandText = "INSERT INTO [Order_Line_Modification-QL] (ID,ProductID,Quantity,OrderlineID,UOMID) VALUES (@ID,@ProductID,@Quantity,@OrderLineID,@UOMID)";
+                    cmdOrderLineModification.Parameters.AddWithValue("@ID", countId);
+                    cmdOrderLineModification.Parameters.AddWithValue("@ProductID", value.Key.Trim());
+                    cmdOrderLineModification.Parameters.AddWithValue("@Quantity", value.Value);
+                    cmdOrderLineModification.Parameters.AddWithValue("@OrderLineID", LineId);
+                    cmdOrderLineModification.Parameters.AddWithValue("@UOMID", UOMID);
+                    cmdOrderLineModification.ExecuteNonQuery();
+                }
+                catch (Exception e)
+                {
+                    throw e;
+                }
+                finally
+                {
+                    cmdOrderLineModification.Parameters.Clear();
+                }
+            }      
+        }
+        public string generateID()
+        {
+            return Guid.NewGuid().ToString("N");
+        }
     }
-
 }
