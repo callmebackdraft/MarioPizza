@@ -7,6 +7,7 @@ using ExcelDataReader;
 using MoreLinq;
 using System.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
+using System.Text.RegularExpressions;
 
 namespace MarioImport
 {
@@ -22,9 +23,9 @@ namespace MarioImport
             string basePath = configuration.GetSection("BasePath").Value;
             //Console.WriteLine(configuration.GetConnectionString("Storage"));
             System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
-            //TestDennis(basePath);
+            TestDennis(basePath);
             //TestJos(basePath);
-            TestChris(basePath);
+            //TestChris(basePath);
         }
 
         private static void TestChris(string path)
@@ -141,12 +142,12 @@ namespace MarioImport
 
         private static List<Product> GetProducts(string basePath)
         {
-            string[] files = { @"\pizza_ingredienten.xlsx", @"\Overige producten.xlsx", @"\pizzabodems.xlsx" };
+            string[] files = { @"\pizza_ingredienten.xlsx", @"\Overige producten.xlsx", @"\pizzabodems.xlsx", @"\Extra Ingredienten.csv" };
             List<Product> result = new List<Product>();
             var pizzaList = GetProductWithDescription(basePath + files[0]);
             foreach (Product product in pizzaList)
             {
-                product.Ingredients = GetIngredients(basePath + files[0], product.Name);
+                product.Ingredients = GetIngredients(basePath + files[0],true, product.Name);
                 product.Categories = GetCategories(basePath, product.Name);
             }
             var productList = GetProductWithDescription(basePath + files[1]);
@@ -156,9 +157,10 @@ namespace MarioImport
             }
             result.AddRange(pizzaList);
             result.AddRange(productList);
-            result.AddRange(GetIngredients(basePath + files[0]));
+            result.AddRange(GetIngredients(basePath + files[3], false));
+            result.AddRange(GetIngredients(basePath + files[0], true));
             result.AddRange(GetPizzaBottom(basePath + files[2]));
-            return result;
+            return result.DistinctBy(p => p.Name).ToList();
         }
 
         private static List<Product> GetProductWithDescription(string pathToFile)
@@ -283,22 +285,23 @@ namespace MarioImport
             return result.DistinctBy(p => p.Name).ToList();
         }
 
-        private static List<Product> GetIngredients(string pathToFile, string productName = "")
+        private static List<Product> GetIngredients(string pathToFile, bool lookForSauce, string productName = "")
         {
             List<Product> result = new List<Product>();
             List<Product> ProductSpecificResult = new List<Product>();
             using (FileStream stream = File.OpenRead(pathToFile))
-            using (IExcelDataReader dr = ExcelReaderFactory.CreateOpenXmlReader(stream))
+            using (var dr = pathToFile.Contains(".csv") ? ExcelReaderFactory.CreateCsvReader(stream) : ExcelReaderFactory.CreateOpenXmlReader(stream))
             {
                 int productColumn = -1;
                 int nameColumn = -1;
                 int amountColumn = -1;
                 int sauceColumn = -1;
+                int priceColumn = -1;
                 DataSet data = dr.AsDataSet();
                 var table = data.Tables[0];
                 for (int rowCount = 0; rowCount < table.Rows.Count; rowCount++)
                 {
-                    if (rowCount == 0)
+                    if (rowCount == 0 && !string.IsNullOrEmpty(productName))
                     {
                         for (int columnCount = 0; columnCount < table.Rows[rowCount].ItemArray.Length; columnCount++)
                         {
@@ -319,8 +322,32 @@ namespace MarioImport
                             {
                                 sauceColumn = columnCount;
                             }
+                            if (columnHeader.ToLower().Contains("price"))
+                            {
+                                priceColumn = columnCount;
+                            }
 
                         }
+                    }
+                    else if (rowCount == 0 && string.IsNullOrEmpty(productName))
+                    {
+                        for (int columnCount = 0; columnCount < table.Rows[rowCount].ItemArray.Length; columnCount++)
+                        {
+                            string columnHeader = table.Rows[rowCount].ItemArray[columnCount].ToString().ToLower();
+                            if (columnHeader.ToLower().Contains("ingredient"))
+                            {
+                                nameColumn = columnCount;
+                            }
+                            if (columnHeader.ToLower().Contains("price"))
+                            {
+                                priceColumn = columnCount;
+                            }
+                            if (columnHeader.ToLower().Contains("pizzasaus_standaard"))
+                            {
+                                sauceColumn = columnCount;
+                            }
+                        }
+                        
                     }
                     else
                     {
@@ -344,8 +371,14 @@ namespace MarioImport
                             result.Add(new Product
                             {
                                 Name = table.Rows[rowCount].ItemArray[nameColumn].ToString().ToLower(),
-                                Categories = new List<string> { "ingredient" }
+                                Categories = new List<string> { "ingredient" },
+                                Price = priceColumn < 0 ? "" : table.Rows[rowCount].ItemArray[priceColumn].ToString().ToLower()
+
                             });
+                            
+                        }
+                        if (lookForSauce)
+                        {
                             result.Add(new Product
                             {
                                 Name = table.Rows[rowCount].ItemArray[sauceColumn].ToString().ToLower(),
@@ -392,13 +425,15 @@ namespace MarioImport
                 cnx.Open();
                 SqlCommand cmd = new SqlCommand();
                 cmd.Connection = cnx;
-                cmd.CommandText = "insert INTO [Product-QL](Name, Description, Size) VALUES (@name, @Description, @Size)";
+                cmd.CommandText = "insert INTO [Product-QL](Name, Description, Size, [UOM ID], CostPriceID) VALUES (@name, @Description, @Size, @UOM, @Price)";
                 foreach (Product str in products)
                 {
                     cmd.Parameters.Clear();
                     cmd.Parameters.AddWithValue("@name", str.Name);
                     cmd.Parameters.AddWithValue("@Description", string.IsNullOrEmpty(str.Description) ? "" : str.Description);
                     cmd.Parameters.AddWithValue("@Size", str.Size);
+                    cmd.Parameters.AddWithValue("@Price", string.IsNullOrEmpty(str.Price) ? "" : Regex.Replace(str.Price, "[^0-9,.]", "").Replace('.',',').Trim());
+                    cmd.Parameters.AddWithValue("@UOM", str.Size > 0 ? "CM" : "");
                     if (cmd.ExecuteNonQuery() > 0)
                     {
                         Console.WriteLine("Product written to db with success");
