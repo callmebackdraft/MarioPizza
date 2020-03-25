@@ -240,7 +240,14 @@ namespace MarioImport
                     cmdOrderLineData.CommandText = "INSERT INTO [OrderLine-QL] (ID,Quantity,PricePaid,OrderHeaderID,ProductID) VALUES (@ID,@LineQuantity,@LinePricePaid,@OrderHeaderID,@ProductID)";
                     cmdOrderLineData.Parameters.AddWithValue("@ID", OrderLineID);
                     cmdOrderLineData.Parameters.AddWithValue("@LineQuantity", dataRow.ItemArray.GetValue(15));
-                    cmdOrderLineData.Parameters.AddWithValue("@LinePricePaid", dataRow.ItemArray.GetValue(13));
+                    if (dataRow.ItemArray.GetValue(13).ToString() == "")
+                    {
+                        cmdOrderLineData.Parameters.AddWithValue("@LinePricePaid", "");
+                    }
+                    else
+                    {
+                        cmdOrderLineData.Parameters.AddWithValue("@LinePricePaid", Regex.Replace(dataRow.ItemArray.GetValue(13).ToString(), "[^0-9,.]", "").Replace('.', ',').Trim());
+                    }
                     cmdOrderLineData.Parameters.AddWithValue("@OrderHeaderID", OrderId);
                     cmdOrderLineData.Parameters.AddWithValue("@ProductID", dataRow.ItemArray.GetValue(10));
                 }
