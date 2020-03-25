@@ -40,9 +40,34 @@ namespace MarioImport
 
         private static void TestDennis(string path)
         {
-            var x = GetProducts(path);
-            WriteCategoriesToDB(GetCategories(path));
-            WriteProductsToDB(x);
+            var prod = GetProducts(path);
+            var cat = GetCategories(path);
+            //WriteCategoriesToDB(cat);
+            //WriteProductsToDB(prod);
+            //SqlCommand sp = new SqlCommand("ProductsAndCategoriesToProduction", new SqlConnection("Data Source = sql6009.site4now.net; Initial Catalog = DB_A2C9F3_MarioPizza; Persist Security Info = True; User ID = DB_A2C9F3_MarioPizza_admin; Password = Februarie2020!"));
+            //sp.CommandType = CommandType.StoredProcedure;
+            //sp.Connection.Open();
+            //sp.ExecuteNonQuery();
+            //sp.Connection.Close();
+            using (SqlConnection con = new SqlConnection("Data Source = sql6009.site4now.net; Initial Catalog = DB_A2C9F3_MarioPizza; Persist Security Info = True; User ID = DB_A2C9F3_MarioPizza_admin; Password = Februarie2020!"))
+            using (SqlCommand cmd = new SqlCommand())
+            {
+                cmd.CommandText = "Insert into [Product_ProductCategory_Connection](ProductID, ProductCatogoryID) Select product.ID, ProductCategory.ID FROM product , ProductCategory WHERE product.name = @prodname and ProductCategory.name = @catname";
+                cmd.Connection = con;
+                con.Open();
+                foreach (Product p in prod)
+                {
+                    foreach (string c in p.Categories)
+                    {
+                        cmd.Parameters.Clear();
+                        cmd.Parameters.AddWithValue("@prodname", p.Name);
+                        cmd.Parameters.AddWithValue("@catname", c);
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+                con.Close();
+            }
+
         }
 
         private static void TestJos(string path)
@@ -147,7 +172,7 @@ namespace MarioImport
             var pizzaList = GetProductWithDescription(basePath + files[0]);
             foreach (Product product in pizzaList)
             {
-                product.Ingredients = GetIngredients(basePath + files[0],true, product.Name);
+                product.Ingredients = GetIngredients(basePath + files[0], true, product.Name);
                 product.Categories = GetCategories(basePath, product.Name);
             }
             var productList = GetProductWithDescription(basePath + files[1]);
@@ -347,7 +372,7 @@ namespace MarioImport
                                 sauceColumn = columnCount;
                             }
                         }
-                        
+
                     }
                     else
                     {
@@ -375,7 +400,7 @@ namespace MarioImport
                                 Price = priceColumn < 0 ? "" : table.Rows[rowCount].ItemArray[priceColumn].ToString().ToLower()
 
                             });
-                            
+
                         }
                         if (lookForSauce)
                         {
@@ -426,13 +451,14 @@ namespace MarioImport
                 SqlCommand cmd = new SqlCommand();
                 cmd.Connection = cnx;
                 cmd.CommandText = "insert INTO [Product-QL](Name, Description, Size, [UOM ID], CostPriceID) VALUES (@name, @Description, @Size, @UOM, @Price)";
+
                 foreach (Product str in products)
                 {
                     cmd.Parameters.Clear();
                     cmd.Parameters.AddWithValue("@name", str.Name);
                     cmd.Parameters.AddWithValue("@Description", string.IsNullOrEmpty(str.Description) ? "" : str.Description);
                     cmd.Parameters.AddWithValue("@Size", str.Size);
-                    cmd.Parameters.AddWithValue("@Price", string.IsNullOrEmpty(str.Price) ? "" : Regex.Replace(str.Price, "[^0-9,.]", "").Replace('.',',').Trim());
+                    cmd.Parameters.AddWithValue("@Price", string.IsNullOrEmpty(str.Price) ? "0" : Regex.Replace(str.Price, "[^0-9,.]", "").Replace('.', ',').Trim());
                     cmd.Parameters.AddWithValue("@UOM", str.Size > 0 ? "CM" : "");
                     if (cmd.ExecuteNonQuery() > 0)
                     {
