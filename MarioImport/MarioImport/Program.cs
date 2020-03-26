@@ -42,15 +42,15 @@ namespace MarioImport
         {
             var prod = GetProducts(path);
             var cat = GetCategories(path);
-            //WriteCategoriesToDB(cat);
-            //WriteProductsToDB(prod);
-            //CallSPForProduction();
-            //LinkCategories(prod);
+            WriteCategoriesToDB(cat);
+            WriteProductsToDB(prod);
+            CallSPForProduction();
+            LinkCategories(prod);
 
             using (SqlConnection con = new SqlConnection("Data Source = sql6009.site4now.net; Initial Catalog = DB_A2C9F3_MarioPizza; Persist Security Info = True; User ID = DB_A2C9F3_MarioPizza_admin; Password = Februarie2020!"))
             using (SqlCommand cmd = new SqlCommand())
             {
-                cmd.CommandText = "Insert into [Product_Combine](ProductID, PartID, Quantity, UOMID) Select a.ID, b.ID, @amount , 'A5854BC7-386D-EA11-9FFB-00155E178308' from product a, product b where a.Name = @prodName and b.Name = @ingredient";
+                cmd.CommandText = "Insert into [Product_Combine](ProductID, PartID, Quantity, UOMID) Select a.ID, b.ID, @amount , (Select ID from UnitOfMeasure where name = 'Stuk') from product a, product b where a.Name = @prodName and b.Name = @ingredient";
                 cmd.Connection = con;
                 con.Open();
                 foreach (Product p in prod)
