@@ -44,18 +44,52 @@ namespace MarioImport
             var cat = GetCategories(path);
             //WriteCategoriesToDB(cat);
             //WriteProductsToDB(prod);
-            //SqlCommand sp = new SqlCommand("ProductsAndCategoriesToProduction", new SqlConnection("Data Source = sql6009.site4now.net; Initial Catalog = DB_A2C9F3_MarioPizza; Persist Security Info = True; User ID = DB_A2C9F3_MarioPizza_admin; Password = Februarie2020!"));
-            //sp.CommandType = CommandType.StoredProcedure;
-            //sp.Connection.Open();
-            //sp.ExecuteNonQuery();
-            //sp.Connection.Close();
+            //CallSPForProduction();
+            //LinkCategories(prod);
+
+            using (SqlConnection con = new SqlConnection("Data Source = sql6009.site4now.net; Initial Catalog = DB_A2C9F3_MarioPizza; Persist Security Info = True; User ID = DB_A2C9F3_MarioPizza_admin; Password = Februarie2020!"))
+            using (SqlCommand cmd = new SqlCommand())
+            {
+                cmd.CommandText = "Insert into [Product_Combine](ProductID, PartID, Quantity, UOMID) Select a.ID, b.ID, @amount , 'A5854BC7-386D-EA11-9FFB-00155E178308' from product a, product b where a.Name = @prodName and b.Name = @ingredient";
+                cmd.Connection = con;
+                con.Open();
+                foreach (Product p in prod)
+                {
+                    if (p.Ingredients != null)
+                    {
+                        foreach (Product ingr in p.Ingredients)
+                        {
+                            cmd.Parameters.Clear();
+                            cmd.Parameters.AddWithValue("@prodname", p.Name);
+                            cmd.Parameters.AddWithValue("@ingredient", ingr.Name);
+                            cmd.Parameters.AddWithValue("@amount", ingr.amount);
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+                }
+                con.Close();
+            }
+
+        }
+
+        private static void CallSPForProduction()
+        {
+            SqlCommand sp = new SqlCommand("ProductsAndCategoriesToProduction", new SqlConnection("Data Source = sql6009.site4now.net; Initial Catalog = DB_A2C9F3_MarioPizza; Persist Security Info = True; User ID = DB_A2C9F3_MarioPizza_admin; Password = Februarie2020!"));
+            sp.CommandType = CommandType.StoredProcedure;
+            sp.Connection.Open();
+            sp.ExecuteNonQuery();
+            sp.Connection.Close();
+        }
+
+        private static void LinkCategories(List<Product> products)
+        {
             using (SqlConnection con = new SqlConnection("Data Source = sql6009.site4now.net; Initial Catalog = DB_A2C9F3_MarioPizza; Persist Security Info = True; User ID = DB_A2C9F3_MarioPizza_admin; Password = Februarie2020!"))
             using (SqlCommand cmd = new SqlCommand())
             {
                 cmd.CommandText = "Insert into [Product_ProductCategory_Connection](ProductID, ProductCatogoryID) Select product.ID, ProductCategory.ID FROM product , ProductCategory WHERE product.name = @prodname and ProductCategory.name = @catname";
                 cmd.Connection = con;
                 con.Open();
-                foreach (Product p in prod)
+                foreach (Product p in products)
                 {
                     foreach (string c in p.Categories)
                     {
@@ -67,7 +101,6 @@ namespace MarioImport
                 }
                 con.Close();
             }
-
         }
 
         private static void TestJos(string path)
