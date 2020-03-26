@@ -189,7 +189,7 @@ namespace MarioImport
                     cmdOrderLineData.CommandText = "INSERT INTO [OrderLine-QL] (ID,Quantity,PricePaid,OrderHeaderID,ProductID) VALUES (@ID,@LineQuantity,@LinePricePaid,@OrderHeaderID,@ProductID)";
                     cmdOrderLineData.Parameters.AddWithValue("@ID", OrderLineID);
                     cmdOrderLineData.Parameters.AddWithValue("@LineQuantity", dataRow.ItemArray.GetValue(15));
-                    cmdOrderLineData.Parameters.AddWithValue("@LinePricePaid", dataRow.ItemArray.GetValue(13));
+                    cmdOrderLineData.Parameters.AddWithValue("@LinePricePaid", Regex.Replace(dataRow.ItemArray.GetValue(13).ToString(), "[^0-9,.]", "").Replace(',', '.').Trim());
                     cmdOrderLineData.Parameters.AddWithValue("@OrderHeaderID", OrderId);
                     cmdOrderLineData.Parameters.AddWithValue("@ProductID", dataRow.ItemArray.GetValue(10));
 
@@ -242,11 +242,11 @@ namespace MarioImport
                     cmdOrderLineData.Parameters.AddWithValue("@LineQuantity", dataRow.ItemArray.GetValue(15));
                     if (dataRow.ItemArray.GetValue(13).ToString() == "")
                     {
-                        cmdOrderLineData.Parameters.AddWithValue("@LinePricePaid", "");
+                        cmdOrderLineData.Parameters.AddWithValue("@LinePricePaid", "0");
                     }
                     else
                     {
-                        cmdOrderLineData.Parameters.AddWithValue("@LinePricePaid", Regex.Replace(dataRow.ItemArray.GetValue(13).ToString(), "[^0-9,.]", "").Replace('.', ',').Trim());
+                        cmdOrderLineData.Parameters.AddWithValue("@LinePricePaid", Regex.Replace(dataRow.ItemArray.GetValue(13).ToString(), "[^0-9,.]", "").Replace(',', '.').Trim());
                     }
                     cmdOrderLineData.Parameters.AddWithValue("@OrderHeaderID", OrderId);
                     cmdOrderLineData.Parameters.AddWithValue("@ProductID", dataRow.ItemArray.GetValue(10));
@@ -257,12 +257,16 @@ namespace MarioImport
                     if (isHeader && SkipImport == false)
                     {
                         //Execute orderheader, customer and address queries
+                        if (dataRow.ItemArray.GetValue(3).ToString() == "MathildaNowee@dayrep.com")
+                        {
+                            Console.WriteLine(dataRow.ItemArray.GetValue(3).ToString());
+                        }
                         cmdOrderData.ExecuteNonQuery();
                         cmdCustomer.ExecuteNonQuery();
                         cmdAddress.ExecuteNonQuery();
                         cmdOrderLineData.ExecuteNonQuery();
 
-                        if(dataRow.ItemArray.GetValue(16) != "")
+                        if(dataRow.ItemArray.GetValue(16).ToString() != "")
                         {
                             ExtraIngredients = dataRow.ItemArray.GetValue(16).ToString().Split(",");
                             InsertOrderLineModificationIntoDatabase(GetDistrinctIngredients(ExtraIngredients), OrderLineID, "Stuks");
@@ -271,12 +275,12 @@ namespace MarioImport
                     }
                     else
                     {
-                        if (SkipImport == false)
+                        if (isHeader == false && SkipImport == false)
                         {
                             //Execute orderline query
                             cmdOrderLineData.ExecuteNonQuery();
 
-                            if (dataRow.ItemArray.GetValue(16) != "")
+                            if (dataRow.ItemArray.GetValue(16).ToString() != "")
                             {
                                 ExtraIngredients = dataRow.ItemArray.GetValue(16).ToString().Split(",");
                                 InsertOrderLineModificationIntoDatabase(GetDistrinctIngredients(ExtraIngredients), OrderLineID, "Stuks");
@@ -492,7 +496,7 @@ namespace MarioImport
                 try
                 {
                     cmdOrderLineModification.CommandText = "INSERT INTO [Order_Line_Modification-QL] (ID,ProductID,Quantity,OrderlineID,UOMID) VALUES (@ID,@ProductID,@Quantity,@OrderLineID,@UOMID)";
-                    cmdOrderLineModification.Parameters.AddWithValue("@ID", countId);
+                    cmdOrderLineModification.Parameters.AddWithValue("@ID", generateID());
                     cmdOrderLineModification.Parameters.AddWithValue("@ProductID", value.Key.Trim());
                     cmdOrderLineModification.Parameters.AddWithValue("@Quantity", value.Value);
                     cmdOrderLineModification.Parameters.AddWithValue("@OrderLineID", LineId);
