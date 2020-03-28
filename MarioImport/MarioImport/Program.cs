@@ -24,13 +24,13 @@ namespace MarioImport
             //Console.WriteLine(configuration.GetConnectionString("Storage"));
             System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
             //TestDennis(basePath);
-            //TestJos(basePath);
-            TestChris(basePath);
+            TestJos(basePath);
+            //TestChris(basePath);
             //CallSPOrderDataImport();
 
             // Check if
 
-            //CallSPEmptyQLTables();
+            CallSPEmptyQLTables();
         }
 
         private static void TestChris(string path)

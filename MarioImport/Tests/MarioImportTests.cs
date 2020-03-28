@@ -31,7 +31,7 @@ namespace Tests
             {
                 List<String> columnData = new List<String>();
                 connection.Open();
-                string query = "SELECT DISTINCT Name FROM [Store-QL]";
+                string query = "SELECT DISTINCT [Name] FROM [Store-QL] UNION SELECT DISTINCT [Name] FROM Store ORDER BY [Name];";
                 using (SqlCommand command = new SqlCommand(query, connection))
                 {
                     using (SqlDataReader reader = command.ExecuteReader())
