@@ -23,16 +23,22 @@ namespace MarioImport
             string basePath = configuration.GetSection("BasePath").Value;
             //Console.WriteLine(configuration.GetConnectionString("Storage"));
             System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
-            TestDennis(basePath);
-            TestJos(basePath);
+            //TestDennis(basePath);
+            //TestJos(basePath);
             TestChris(basePath);
-            CallSPOrderDataImport();
-            CallSPEmptyQLTables();
+            //CallSPOrderDataImport();
+
+            // Check if
+
+            //CallSPEmptyQLTables();
         }
 
         private static void TestChris(string path)
         {
             CSVImport csvImport = new CSVImport(path);
+            TXTImport txtImport = new TXTImport(path);
+            csvImport.SetStoreList (txtImport.GetStoresFromDatabase());
+
             csvImport.importCSV("MarioOrderData01_10000.csv");
             csvImport.importCSV("MarioOrderData02_10000.csv");
             csvImport.importCSV("MarioOrderData03_10000.csv");

@@ -22,11 +22,19 @@ namespace MarioImport
         SqlCommand cmdOrderLineModification = new SqlCommand();
         int Counter = 0;
 
+        private List<string> StoreList = null;
+        
+
         Dictionary<string, string> FailedOrder = new Dictionary<string, string>();
         string errorMessage = "";
         public CSVImport(string basePath)
         {
             path = basePath;
+        }
+
+        public void SetStoreList(List<string>_StoreList)
+        {
+            StoreList = _StoreList;
         }
 
         public void importCSV(string fileName)
@@ -94,6 +102,12 @@ namespace MarioImport
 
                     isHeader = true;
                     SkipImport = false;
+
+                    if ( !StoreList.Contains(dataRow.ItemArray.GetValue(0).ToString().Trim()))
+                    {
+                        SkipImport = true;
+                        errorMessage = errorMessage + "Corresponding store has not been imported";
+                    }
                     if (Zipcode == "")
                     { 
                         SkipImport = true;

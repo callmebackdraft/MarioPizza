@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -21,6 +22,29 @@ namespace Tests
             actual = counts.Count;
 
             Assert.AreEqual(expected, actual);
+        }
+
+        [TestMethod]
+        public void TestGetStoresFromDatabase()
+        {
+            using (SqlConnection connection = new SqlConnection("Data Source = sql6009.site4now.net; Initial Catalog = DB_A2C9F3_MarioPizza; Persist Security Info = True; User ID = DB_A2C9F3_MarioPizza_admin; Password = Februarie2020!"))
+            {
+                List<String> columnData = new List<String>();
+                connection.Open();
+                string query = "SELECT DISTINCT Name FROM [Store-QL]";
+                using (SqlCommand command = new SqlCommand(query, connection))
+                {
+                    using (SqlDataReader reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            columnData.Add(reader.GetString(0));
+                        }
+                    }
+
+                }
+                Assert.IsTrue(columnData != null);
+            }
         }
     }
 }
