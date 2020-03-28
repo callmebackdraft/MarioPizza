@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.OleDb;
@@ -19,6 +20,10 @@ namespace MarioImport
 
         SqlConnection cnx = new SqlConnection(sqlConn);
         SqlCommand cmdOrderLineModification = new SqlCommand();
+        int Counter = 0;
+
+        Dictionary<string, string> FailedOrder = new Dictionary<string, string>();
+        string errorMessage = "";
         public CSVImport(string basePath)
         {
             path = basePath;
@@ -60,10 +65,13 @@ namespace MarioImport
                 ExtraIngredients = null;
                 string OrderLineID = generateID();
 
-                if (dataRow.ItemArray.GetValue(0) != "")
+                Counter++;
+
+                if (dataRow.ItemArray.GetValue(0).ToString() != "")
                 {
                     OrderId = generateID();
                     Zipcode = "";
+                    errorMessage = "";
                     //Split address field into Streetname, house number and house number addition
                     List<string> addressInfo = new List<string>();
                     addressInfo = AdressSplitter(dataRow.ItemArray.GetValue(4).ToString());
@@ -86,24 +94,66 @@ namespace MarioImport
 
                     isHeader = true;
                     SkipImport = false;
-
-                    if (
-                        Zipcode == ""
-                        || dataRow.ItemArray.GetValue(0).ToString() == ""
-                        || dataRow.ItemArray.GetValue(1).ToString() == ""
-                        || dataRow.ItemArray.GetValue(2).ToString() == ""
-                        || dataRow.ItemArray.GetValue(3).ToString() == ""
-                        || dataRow.ItemArray.GetValue(4).ToString() == ""
-                        || dataRow.ItemArray.GetValue(5).ToString() == ""
-                        || dataRow.ItemArray.GetValue(6).ToString() == ""
-                        || dataRow.ItemArray.GetValue(7).ToString() == ""
-                        || dataRow.ItemArray.GetValue(8).ToString() == ""
-                        || dataRow.ItemArray.GetValue(9).ToString() == ""
-                        )
+                    if (Zipcode == "")
                     { 
-                        SkipImport = true; 
+                        SkipImport = true;
+                        errorMessage = errorMessage + " " + "Zipcode is wrong";
+                    }
+                    if (dataRow.ItemArray.GetValue(0).ToString() == "")
+                    {
+                        SkipImport = true;
+                        errorMessage = errorMessage + " " +  "Store name is empty";
+                    }
+                    if (dataRow.ItemArray.GetValue(1).ToString() == "")
+                    {
+                        SkipImport = true;
+                        errorMessage = errorMessage + " " + "Customer name is empty";
+                    }
+                    if (dataRow.ItemArray.GetValue(2).ToString() == "")
+                    {
+                        SkipImport = true;
+                        errorMessage = errorMessage + " " + "Cellphone number is empty";
+                    }
+                    if (dataRow.ItemArray.GetValue(3).ToString() == "")
+                    {
+                        SkipImport = true;
+                        errorMessage = errorMessage + " " + "Email is empty";
+                    }
+                    if (dataRow.ItemArray.GetValue(4).ToString() == "")
+                    {
+                        SkipImport = true;
+                        errorMessage = errorMessage + " " + "Address is wrong";
+                    }
+                    if (dataRow.ItemArray.GetValue(5).ToString() == "")
+                    {
+                        SkipImport = true;
+                        errorMessage = errorMessage + " " + "City is wrong";
+                    }
+                    if (dataRow.ItemArray.GetValue(6).ToString() == "")
+                    {
+                        SkipImport = true;
+                        errorMessage = errorMessage + " " + "Orderdate is wrong";
+                    }
+                    if (dataRow.ItemArray.GetValue(7).ToString() == "")
+                    {
+                        SkipImport = true;
+                        errorMessage = errorMessage + " " + "DeliveryType is wrong";
+                    }
+                    if (dataRow.ItemArray.GetValue(8).ToString() == "")
+                    {
+                        SkipImport = true;
+                        errorMessage = errorMessage + " " + "DeliveryDate is wrong";
+                    }
+                    if (dataRow.ItemArray.GetValue(9).ToString() == "")
+                    {
+                        SkipImport = true;
+                        errorMessage = errorMessage + " " + "Deliverymoment is wrong";
                     }
 
+                    if (SkipImport == true)
+                    {
+                        FailedOrder.Add(DatarowToString(dataRow), errorMessage);
+                    }
                     //Construct orderheader query
                     cmdOrderData.CommandText = "INSERT INTO [OrderHeader-QL] (" +
                         "ID," +
@@ -254,28 +304,35 @@ namespace MarioImport
 
                 try
                 {
-                    if (isHeader && SkipImport == false)
+                    if (isHeader == true)
                     {
-                        //Execute orderheader, customer and address queries
-                        if (dataRow.ItemArray.GetValue(3).ToString() == "MathildaNowee@dayrep.com")
+                        if (SkipImport == false)
                         {
-                            Console.WriteLine(dataRow.ItemArray.GetValue(3).ToString());
-                        }
-                        cmdOrderData.ExecuteNonQuery();
-                        cmdCustomer.ExecuteNonQuery();
-                        cmdAddress.ExecuteNonQuery();
-                        cmdOrderLineData.ExecuteNonQuery();
+                            //Execute orderheader, customer and address queries
+                            if (dataRow.ItemArray.GetValue(3).ToString() == "MathildaNowee@dayrep.com")
+                            {
+                                Console.WriteLine(dataRow.ItemArray.GetValue(3).ToString());
+                            }
+                            cmdOrderData.ExecuteNonQuery();
+                            cmdCustomer.ExecuteNonQuery();
+                            cmdAddress.ExecuteNonQuery();
+                            cmdOrderLineData.ExecuteNonQuery();
 
-                        if(dataRow.ItemArray.GetValue(16).ToString() != "")
-                        {
-                            ExtraIngredients = dataRow.ItemArray.GetValue(16).ToString().Split(",");
-                            InsertOrderLineModificationIntoDatabase(GetDistrinctIngredients(ExtraIngredients), OrderLineID, "Stuks");
+                            if (dataRow.ItemArray.GetValue(16).ToString() != "")
+                            {
+                                ExtraIngredients = dataRow.ItemArray.GetValue(16).ToString().Split(",");
+                                InsertOrderLineModificationIntoDatabase(GetDistrinctIngredients(ExtraIngredients), OrderLineID, "Stuks");
+                            }
                         }
-                            
+                        else
+                        {
+                            FailedOrder.Add(DatarowToString(dataRow) + " " + Counter.ToString(), errorMessage);
+                        }
+
                     }
-                    else
+                    if (isHeader == false)
                     {
-                        if (isHeader == false && SkipImport == false)
+                        if (SkipImport == false)
                         {
                             //Execute orderline query
                             cmdOrderLineData.ExecuteNonQuery();
@@ -285,6 +342,10 @@ namespace MarioImport
                                 ExtraIngredients = dataRow.ItemArray.GetValue(16).ToString().Split(",");
                                 InsertOrderLineModificationIntoDatabase(GetDistrinctIngredients(ExtraIngredients), OrderLineID, "Stuks");
                             }
+                        }
+                        else
+                        {
+                            FailedOrder.Add(DatarowToString(dataRow) + " " + Counter.ToString(), errorMessage);
                         }
                     }
                 }
@@ -303,7 +364,9 @@ namespace MarioImport
                 }
             }
             cnx.Close();
+            WriteToFile(FailedOrder);
             //accessConn.Close();
+            FailedOrder.Clear();
         }
 
 
@@ -517,5 +580,26 @@ namespace MarioImport
         {
             return Guid.NewGuid().ToString("N");
         }
+        public string DatarowToString(DataRow datarow)
+        {
+            StringBuilder sb = new StringBuilder();
+            object[] arr = datarow.ItemArray;
+            for (int i = 0; i < arr.Length; i++)
+            {
+                sb.Append(Convert.ToString(arr[i]));
+                sb.Append("|");
+            }
+           
+            return sb.ToString();
+        }
+        public void WriteToFile(Dictionary<string,string> Lines)
+        {
+            using (System.IO.StreamWriter file =
+            new System.IO.StreamWriter(path + @"\FailedOrders " + DateTime.Now.ToString("yyyy-dd-M--HH-mm-ss") + ".txt"))
+            {
+                file.Write(JsonConvert.SerializeObject(Lines, Formatting.Indented));
+            }
+        }
     }
+
 }

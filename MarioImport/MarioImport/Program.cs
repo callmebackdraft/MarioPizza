@@ -24,8 +24,10 @@ namespace MarioImport
             //Console.WriteLine(configuration.GetConnectionString("Storage"));
             System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
             TestDennis(basePath);
-            //TestJos(basePath);
-            //TestChris(basePath);
+            TestJos(basePath);
+            TestChris(basePath);
+            CallSPOrderDataImport();
+            CallSPEmptyQLTables();
         }
 
         private static void TestChris(string path)
@@ -80,13 +82,28 @@ namespace MarioImport
             sp.ExecuteNonQuery();
             sp.Connection.Close();
         }
-
+        private static void CallSPOrderDataImport()
+        {
+            SqlCommand sp = new SqlCommand("OrderDataImport", new SqlConnection("Data Source = sql6009.site4now.net; Initial Catalog = DB_A2C9F3_MarioPizza; Persist Security Info = True; User ID = DB_A2C9F3_MarioPizza_admin; Password = Februarie2020!"));
+            sp.CommandType = CommandType.StoredProcedure;
+            sp.Connection.Open();
+            sp.ExecuteNonQuery();
+            sp.Connection.Close();
+        }
+        private static void CallSPEmptyQLTables()
+        {
+            SqlCommand sp = new SqlCommand("EmptyQLTables", new SqlConnection("Data Source = sql6009.site4now.net; Initial Catalog = DB_A2C9F3_MarioPizza; Persist Security Info = True; User ID = DB_A2C9F3_MarioPizza_admin; Password = Februarie2020!"));
+            sp.CommandType = CommandType.StoredProcedure;
+            sp.Connection.Open();
+            sp.ExecuteNonQuery();
+            sp.Connection.Close();
+        }
         private static void LinkCategories(List<Product> products)
         {
             using (SqlConnection con = new SqlConnection("Data Source = sql6009.site4now.net; Initial Catalog = DB_A2C9F3_MarioPizza; Persist Security Info = True; User ID = DB_A2C9F3_MarioPizza_admin; Password = Februarie2020!"))
             using (SqlCommand cmd = new SqlCommand())
             {
-                cmd.CommandText = "Insert into [Product_ProductCategory_Connection](ProductID, ProductCatogoryID) Select product.ID, ProductCategory.ID FROM product , ProductCategory WHERE product.name = @prodname and ProductCategory.name = @catname";
+                cmd.CommandText = "Insert into [Product_ProductCategory_Connection]  (ProductID, ProductCatogoryID) Select product.ID, ProductCategory.ID FROM product , ProductCategory WHERE NOT EXISTS (SELECT ProductID,ProductCatogoryID from [Product_ProductCategory_Connection]  where [Product_ProductCategory_Connection].ProductID = product.ID and [Product_ProductCategory_Connection].ProductCatogoryID = ProductCategory.ID)";
                 cmd.Connection = con;
                 con.Open();
                 foreach (Product p in products)
