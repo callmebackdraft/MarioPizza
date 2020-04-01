@@ -83,7 +83,8 @@ namespace MarioImport
                 Console.WriteLine(s.ToString());
             }
             Console.WriteLine("all the nonvalid stores:");
-            File.Delete(path + @"\WriteLines2.txt"); File.Delete(path + @"\WriteLines2.txt");
+            File.Delete(path + @"\WriteLines2.txt");
+            File.Delete(path + @"\WriteLines2.txt");
             using (System.IO.StreamWriter file =
             new System.IO.StreamWriter(path + @"\WriteLines2.txt"))
             {
@@ -159,6 +160,27 @@ namespace MarioImport
                 }
             }
             cnx.Close();
+        }
+        public List<string> GetStoresFromDatabase()
+        {
+            using (SqlConnection connection = new SqlConnection("Data Source = sql6009.site4now.net; Initial Catalog = DB_A2C9F3_MarioPizza; Persist Security Info = True; User ID = DB_A2C9F3_MarioPizza_admin; Password = Februarie2020!"))
+            {
+                List<String> columnData = new List<String>();
+                connection.Open();
+                string query = "SELECT DISTINCT [Name] FROM [Store-QL] UNION SELECT DISTINCT [Name] FROM Store ORDER BY [Name];";
+                using (SqlCommand command = new SqlCommand(query, connection))
+                {
+                    using (SqlDataReader reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            columnData.Add(reader.GetString(0));
+                        }
+                    }
+                }
+                return columnData;
+            }
+            
         }
     }
 }
